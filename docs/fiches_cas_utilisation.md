@@ -107,7 +107,7 @@ Ils ont été choisis parce qu'ils portent les règles métier les plus riches e
 **Séquencement** : le cas commence quand le préparateur ouvre une liste qui lui est affectée. Il inclut « Consulter ses listes de prélèvement » (`«include»`).
 
 **Préconditions**
-- Le responsable d'exploitation a généré la liste pour une commande. La génération inclut « Choisir les lots à sortir (FEFO ou FIFO) ».
+- Le responsable d'exploitation a généré la liste pour une commande. La génération inclut « Choisir les lots à sortir », étendu par « Sortir en FEFO (premier périmé) » ou « Sortir en FIFO (premier entré) ».
 - La liste est affectée au préparateur, par le responsable ou par une prise en charge d'une liste non affectée.
 
 **Enchaînement nominal**
