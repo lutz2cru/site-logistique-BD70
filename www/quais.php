@@ -4,12 +4,13 @@ require __DIR__ . '/includes/layout.php';
 
 $u = exiger_profil('responsable', 'accueil');
 $gestion = a_profil('responsable');
+$suiviStatut = a_profil('accueil');   // le responsable gère les quais, l'accueil suit leur statut
 
 if (est_post()) {
     verifier_csrf();
     $id = (int) ($_POST['id'] ?? 0);
     try {
-        if (isset($_POST['statut'])) {
+        if (isset($_POST['statut']) && $suiviStatut) {
             // suivi / modification du statut (libre, hors service)
             $statut = $_POST['statut'] === 'hors_service' ? 'hors_service' : 'libre';
             if ($statut === 'libre' && valeur("SELECT COUNT(*) FROM passage p JOIN type_etape te ON te.id = p.etape_courante_id
@@ -57,7 +58,8 @@ entete('Quais');
             <td class="actions-ligne">
                 <form method="post">
                     <?= champ_csrf() ?><input type="hidden" name="id" value="<?= $q['id'] ?>">
-                    <?php if ($q['statut_stocke'] === 'hors_service'): ?>
+                    <?php if (!$suiviStatut): ?>
+                    <?php elseif ($q['statut_stocke'] === 'hors_service'): ?>
                         <button class="petit secondaire" name="statut" value="libre">Remettre en service</button>
                     <?php else: ?>
                         <button class="petit discret" name="statut" value="hors_service" onclick="return confirm('Passer ce quai hors service ?')">Hors service</button>
