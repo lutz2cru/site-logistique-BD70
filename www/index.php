@@ -37,6 +37,39 @@ if ($u['profil'] === 'transporteur') {
     exit;
 }
 
+// L'administrateur gère le système d'information, pas l'exploitation
+if ($u['profil'] === 'admin') {
+    $c = ligne("SELECT SUM(actif = FALSE) AS en_attente, SUM(actif = TRUE) AS actifs FROM utilisateur");
+    $parProfil = lignes("SELECT p.libelle, COUNT(u.id) AS nb FROM profil p LEFT JOIN utilisateur u ON u.profil_id = p.id AND u.actif
+                          GROUP BY p.id ORDER BY p.id");
+    $journal = (int) valeur("SELECT COUNT(*) FROM journal_audit WHERE date_heure >= CURRENT_DATE - INTERVAL 7 DAY");
+    entete('Tableau de bord');
+    ?>
+    <div class="kpis">
+        <div class="kpi"><div class="valeur"><?= (int) $c['en_attente'] ?></div><div class="libelle">inscriptions à valider</div></div>
+        <div class="kpi"><div class="valeur"><?= (int) $c['actifs'] ?></div><div class="libelle">comptes actifs</div></div>
+        <div class="kpi"><div class="valeur"><?= nombre($journal) ?></div><div class="libelle">modifications journalisées (7 jours)</div></div>
+    </div>
+    <div class="grille">
+        <div class="carte">
+            <h2>Comptes actifs par profil <a class="bouton petit secondaire" href="utilisateurs.php?actif=0">Inscriptions en attente</a></h2>
+            <div class="tableau"><table>
+                <tr><th>Profil</th><th class="nombre">Comptes</th></tr>
+                <?php foreach ($parProfil as $p): ?>
+                <tr><td><?= e($p['libelle']) ?></td><td class="nombre"><?= $p['nb'] ?></td></tr>
+                <?php endforeach; ?>
+            </table></div>
+        </div>
+        <div class="carte">
+            <h2>Journal des modifications <a class="bouton petit secondaire" href="journal.php">Consulter</a></h2>
+            <p class="discret">Traçabilité des modifications sensibles (rendez-vous, quais, articles, emplacements, comptes), alimentée par les déclencheurs de la base.</p>
+        </div>
+    </div>
+    <?php
+    pied();
+    exit;
+}
+
 // ---------------------------------------------------------------------
 //  Personnel de l'entrepôt
 // ---------------------------------------------------------------------

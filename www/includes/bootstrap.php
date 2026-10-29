@@ -63,7 +63,7 @@ function a_profil(string ...$profils): bool
 {
     $u = utilisateur();
     if ($u === null) { return false; }
-    return $u['profil'] === 'admin' || in_array($u['profil'], $profils, true);
+    return in_array($u['profil'], $profils, true);
 }
 
 function exiger_connexion(): array
@@ -143,7 +143,7 @@ const STATUTS = [
     'bon' => ['Bon', 'vert'], 'refuse' => ['Refusé', 'rouge'],
     'entree' => ['Entrée', 'vert'], 'sortie' => ['Sortie', 'rouge'], 'transfert' => ['Transfert', 'bleu'], 'ajustement' => ['Ajustement', 'orange'],
     'reception' => ['Réception', 'bleu'], 'expedition' => ['Expédition', 'violet'], 'mixte' => ['Mixte', 'gris'],
-    'a_faire' => ['À faire', 'bleu'], 'terminee' => ['Terminée', 'vert'],
+    'a_faire' => ['À faire', 'bleu'], 'terminee' => ['Terminée', 'vert'], 'recue' => ['Reçue', 'bleu'],
     'en_preparation' => ['En préparation', 'orange'], 'preparee' => ['Préparée', 'bleu'], 'expediee' => ['Expédiée', 'vert'], 'annulee' => ['Annulée', 'gris'],
 ];
 

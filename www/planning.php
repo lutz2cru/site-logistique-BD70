@@ -4,6 +4,7 @@ require __DIR__ . '/includes/layout.php';
 
 $u = exiger_profil('responsable', 'accueil', 'transporteur');
 $estTransporteur = $u['profil'] === 'transporteur';
+$peutSaisir = a_profil('accueil', 'transporteur');   // le responsable consulte sans saisir
 
 $jour = filtre('date') ?: date('Y-m-d');
 if (!DateTime::createFromFormat('Y-m-d', $jour)) { $jour = date('Y-m-d'); }
@@ -48,7 +49,7 @@ entete('Planning des quais');
             <span class="pastille bleu">Planifié</span><span class="pastille vert">Honoré</span><span class="pastille rouge">Absent</span>
             <span>hachuré = expédition</span>
         </span>
-        <a class="bouton" href="rdv_form.php?date=<?= e($jour) ?>">+ Nouveau rendez-vous</a>
+        <?php if ($peutSaisir): ?><a class="bouton" href="rdv_form.php?date=<?= e($jour) ?>">+ Nouveau rendez-vous</a><?php endif; ?>
     </div>
 </div>
 
@@ -74,10 +75,10 @@ entete('Planning des quais');
                 $info = $visible
                     ? heure($r['debut']) . '–' . heure($r['fin']) . ' · ' . $r['immatriculation'] . ' · ' . $r['raison_sociale']
                     : heure($r['debut']) . '–' . heure($r['fin']) . ' · créneau réservé'; ?>
-                <?php if ($visible): ?>
+                <?php if ($visible && $peutSaisir): ?>
                     <a class="<?= $classe ?>" style="<?= $style ?>" href="rdv_form.php?id=<?= $r['id'] ?>" title="<?= e($r['numero'] . ' · ' . $info) ?>"><?= e($info) ?></a>
                 <?php else: ?>
-                    <span class="<?= $classe ?>" style="<?= $style ?>" title="<?= e($info) ?>">Réservé</span>
+                    <span class="<?= $classe ?>" style="<?= $style ?>" title="<?= e($info) ?>"><?= $visible ? e($info) : 'Réservé' ?></span>
                 <?php endif; ?>
             <?php endforeach; ?>
         </div>

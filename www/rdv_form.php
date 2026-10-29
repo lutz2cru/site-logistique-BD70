@@ -2,7 +2,7 @@
 require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
-$u = exiger_profil('responsable', 'accueil', 'transporteur');
+$u = exiger_profil('accueil', 'transporteur');
 $estTransporteur = $u['profil'] === 'transporteur';
 
 // Rendez-vous existant (le transporteur ne voit que les siens)

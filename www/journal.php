@@ -2,7 +2,7 @@
 require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
-exiger_profil();   // administrateur uniquement
+exiger_profil('admin');
 
 $f = ['table' => filtre('table'), 'action' => filtre('action'), 'du' => filtre('du') ?: date('Y-m-d', strtotime('-7 days')), 'au' => filtre('au') ?: date('Y-m-d')];
 $where = ['j.date_heure >= ?', 'j.date_heure < ? + INTERVAL 1 DAY'];

@@ -25,6 +25,7 @@ function referentiels(): array
 {
     $gestion = ['responsable'];
     $transport = ['responsable', 'accueil'];
+    $accueil = ['accueil'];
     return [
         // ------------------------------------------------------------- transport
         'transporteurs' => [
@@ -64,7 +65,7 @@ function referentiels(): array
             'recherche' => ['t.reference', 't.objet'], 'filtres' => ['transporteur_id'],
         ],
         'chauffeurs' => [
-            'table' => 'chauffeur', 'titre' => 'Chauffeurs', 'groupe' => 'transport', 'lecture' => $transport, 'ecriture' => $transport,
+            'table' => 'chauffeur', 'titre' => 'Chauffeurs', 'groupe' => 'transport', 'lecture' => $transport, 'ecriture' => $accueil,
             'champs' => [
                 'transporteur_id' => ['Transporteur', 'liste', 'requis' => true, 'sql' => 'SELECT id, raison_sociale FROM transporteur ORDER BY raison_sociale'],
                 'prenom' => ['Prénom', 'texte', 'requis' => true, 'max' => 60], 'nom' => ['Nom', 'texte', 'requis' => true, 'max' => 60],
@@ -84,7 +85,7 @@ function referentiels(): array
             'recherche' => ['t.nom', 't.prenom', 't.numero_permis'], 'filtres' => ['transporteur_id', 'categorie_permis'],
         ],
         'vehicules' => [
-            'table' => 'vehicule', 'titre' => 'Véhicules', 'groupe' => 'transport', 'lecture' => $transport, 'ecriture' => $transport,
+            'table' => 'vehicule', 'titre' => 'Véhicules', 'groupe' => 'transport', 'lecture' => $transport, 'ecriture' => $accueil,
             'champs' => [
                 'immatriculation' => ['Immatriculation', 'immat', 'requis' => true],
                 'transporteur_id' => ['Transporteur', 'liste', 'requis' => true, 'sql' => 'SELECT id, raison_sociale FROM transporteur ORDER BY raison_sociale'],

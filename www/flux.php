@@ -3,7 +3,7 @@ require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
 $u = exiger_profil('responsable', 'accueil', 'magasinier');
-$peutAgir = a_profil('responsable', 'accueil');   // le magasinier ne fait que consulter (sauf (dé)chargement)
+$peutAgir = a_profil('accueil');   // responsable et magasinier consultent (sauf (dé)chargement)
 
 $etapes = lignes('SELECT id, code, libelle, ordre FROM type_etape ORDER BY ordre');
 $parCode = array_column($etapes, null, 'code');

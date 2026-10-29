@@ -2,7 +2,7 @@
 require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
-exiger_profil('responsable', 'accueil');
+exiger_profil('accueil');
 
 // Arrivée sur rendez-vous ou sans rendez-vous
 $rdvId = (int) ($_GET['rdv'] ?? 0);

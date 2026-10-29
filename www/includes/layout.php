@@ -3,13 +3,13 @@
  * Gabarit commun : en-tête, menu selon le profil, messages flash, pied de page.
  */
 
-/** Entrées du menu : [section => [[libellé, url, profils autorisés]]] (l'admin voit tout). */
+/** Entrées du menu : [section => [[libellé, url, profils autorisés]]]. */
 function menu(): array
 {
     $exploitation = ['responsable', 'accueil', 'magasinier'];
     return [
         '' => [
-            ['Tableau de bord', 'index.php', ['responsable', 'accueil', 'magasinier', 'transporteur']],
+            ['Tableau de bord', 'index.php', ['responsable', 'accueil', 'magasinier', 'transporteur', 'admin']],
         ],
         'Quais et rendez-vous' => [
             ['Planning des quais', 'planning.php', ['responsable', 'accueil', 'transporteur']],
@@ -23,6 +23,10 @@ function menu(): array
         'Réception' => [
             ['Réceptions', 'receptions.php', ['responsable', 'magasinier']],
             ['Avis d\'expédition', 'avis.php', ['responsable', 'magasinier']],
+        ],
+        'Préparation' => [
+            ['Commandes et listes', 'preparation.php', ['responsable']],
+            ['Mes listes de prélèvement', 'listes.php', ['magasinier']],
         ],
         'Stocks' => [
             ['Recherche de stock', 'stock.php', ['responsable', 'magasinier']],
@@ -43,8 +47,8 @@ function menu(): array
             ['Indicateurs', 'indicateurs.php', ['responsable']],
         ],
         'Administration' => [
-            ['Utilisateurs', 'utilisateurs.php', []],
-            ['Journal des modifications', 'journal.php', []],
+            ['Utilisateurs', 'utilisateurs.php', ['admin']],
+            ['Journal des modifications', 'journal.php', ['admin']],
         ],
     ];
 }

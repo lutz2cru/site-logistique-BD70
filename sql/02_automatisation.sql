@@ -524,6 +524,26 @@ BEGIN
     UPDATE commande SET statut = 'en_preparation' WHERE id = p_commande_id AND statut = 'recue';
 END$$
 
+-- Clôture d'une liste de prélèvement par le préparateur : toutes les lignes doivent
+-- avoir été traitées ; la commande passe « préparée » quand toutes ses listes sont terminées.
+CREATE PROCEDURE cloturer_liste_prelevement(IN p_liste_id INT UNSIGNED)
+BEGIN
+    DECLARE v_commande_id INT UNSIGNED DEFAULT NULL;
+
+    SELECT commande_id INTO v_commande_id FROM liste_prelevement WHERE id = p_liste_id AND statut = 'en_cours';
+    IF v_commande_id IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Seule une liste en cours peut être clôturée.';
+    END IF;
+    IF EXISTS (SELECT 1 FROM ligne_prelevement WHERE liste_id = p_liste_id AND quantite_prelevee IS NULL) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Toutes les lignes de la liste doivent être prélevées avant la clôture.';
+    END IF;
+
+    UPDATE liste_prelevement SET statut = 'terminee', fin = NOW() WHERE id = p_liste_id;
+    UPDATE commande SET statut = 'preparee'
+     WHERE id = v_commande_id AND statut = 'en_preparation'
+       AND NOT EXISTS (SELECT 1 FROM liste_prelevement WHERE commande_id = v_commande_id AND statut <> 'terminee');
+END$$
+
 -- Rendez-vous non honorés : passés à « absent » 2 h après la fin du créneau
 CREATE PROCEDURE marquer_rdv_absents()
 BEGIN

@@ -2,7 +2,7 @@
 require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
-$moi = exiger_profil();   // administrateur uniquement
+$moi = exiger_profil('admin');
 
 $profils = paires('SELECT id, libelle FROM profil ORDER BY id');
 $transporteurs = paires('SELECT id, raison_sociale FROM transporteur ORDER BY raison_sociale');
