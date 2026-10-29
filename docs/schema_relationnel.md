@@ -13,7 +13,7 @@ Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>c
 - **chauffeur_habilitation** (<u>#chauffeur_id</u>, <u>#habilitation_id</u>, date_obtention, date_expiration)
   - références : `chauffeur_id` → chauffeur, `habilitation_id` → habilitation
 - **client** (<u>id</u>, *siret*, raison_sociale, adresse, code_postal, ville, telephone, email)
-- **commande** (<u>id</u>, *numero*, #client_id, date_commande, expedition_souhaitee, adresse_livraison, code_postal, ville, statut)
+- **commande** (<u>id</u>, *numero*, #client_id, date_commande, expedition_souhaitee, adresse_livraison, code_postal, ville, statut, canal)
   - références : `client_id` → client
 - **condition_stockage** (<u>id</u>, *libelle*, temperature_min, temperature_max)
 - **contact** (<u>id</u>, #transporteur_id, nom, prenom, fonction, telephone, *email*)
@@ -46,7 +46,7 @@ Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>c
   - références : `article_id` → article
 - **mouvement_stock** (<u>id</u>, *numero*, type, #lot_id, quantite, #emplacement_source_id, #emplacement_destination_id, #utilisateur_id, date_heure, motif)
   - références : `emplacement_destination_id` → emplacement, `lot_id` → lot, `emplacement_source_id` → emplacement, `utilisateur_id` → utilisateur
-- **passage** (<u>id</u>, *numero*, *#rendez_vous_id*, #vehicule_id, #chauffeur_id, #quai_id, sens, #etape_courante_id, observations)
+- **passage** (<u>id</u>, *numero*, *#rendez_vous_id*, #vehicule_id, #chauffeur_id, #quai_id, sens, #etape_courante_id, observations, borne)
   - références : `chauffeur_id` → chauffeur, `etape_courante_id` → type_etape, `quai_id` → quai, `rendez_vous_id` → rendez_vous, `vehicule_id` → vehicule
 - **passage_etape** (<u>#passage_id</u>, <u>#type_etape_id</u>, date_heure, commentaire)
   - références : `type_etape_id` → type_etape, `passage_id` → passage
@@ -72,8 +72,8 @@ Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>c
 - **type_vehicule** (<u>id</u>, *libelle*)
 - **unite_expedition** (<u>id</u>, *sscc*, #commande_id, #expedition_id, type, poids_kg)
   - références : `commande_id` → commande, `expedition_id` → expedition
-- **utilisateur** (<u>id</u>, *email*, nom, prenom, telephone, mot_de_passe_hash, date_creation, actif, #profil_id, #transporteur_id)
-  - références : `profil_id` → profil, `transporteur_id` → transporteur
+- **utilisateur** (<u>id</u>, *email*, nom, prenom, telephone, mot_de_passe_hash, date_creation, actif, #profil_id, #transporteur_id, #client_id)
+  - références : `client_id` → client, `profil_id` → profil, `transporteur_id` → transporteur
 - **vehicule** (<u>id</u>, *immatriculation*, #transporteur_id, #type_vehicule_id, poids_max_kg, palettes_max, frigorifique, hayon)
   - références : `transporteur_id` → transporteur, `type_vehicule_id` → type_vehicule
 - **zone** (<u>id</u>, *code*, libelle)
