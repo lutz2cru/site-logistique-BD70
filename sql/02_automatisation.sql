@@ -1,5 +1,5 @@
 -- =====================================================================
---  Script 2/3 : automatisation interne à la base
+--  Script 2/2 : automatisation interne à la base
 --   - fonctions et procédures stockées
 --   - déclencheurs (numérotation, contrôles métier, mise à jour du stock,
 --     statut des quais, historisation)
@@ -49,6 +49,20 @@ BEGIN
       FROM stock s JOIN lot l ON l.id = s.lot_id
      WHERE s.emplacement_id = p_emplacement_id;
     RETURN v_capacite - v_occupees;
+END$$
+
+-- Poids encore admissible sur un emplacement (en kg)
+CREATE FUNCTION fn_poids_libre(p_emplacement_id INT UNSIGNED)
+RETURNS DECIMAL(12,3)
+READS SQL DATA
+BEGIN
+    DECLARE v_maximum DECIMAL(12,3);
+    DECLARE v_present DECIMAL(12,3);
+    SELECT poids_max_kg INTO v_maximum FROM emplacement WHERE id = p_emplacement_id;
+    SELECT COALESCE(SUM(s.quantite * ar.poids_kg), 0) INTO v_present
+      FROM stock s JOIN lot l ON l.id = s.lot_id JOIN article ar ON ar.id = l.article_id
+     WHERE s.emplacement_id = p_emplacement_id;
+    RETURN v_maximum - v_present;
 END$$
 
 -- =====================================================================
@@ -228,6 +242,14 @@ BEGIN
         IF (SELECT statut FROM quai WHERE id = v_quai_id) <> 'libre' THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Le quai affecté n''est pas libre.';
         END IF;
+        -- mêmes règles qu'un rendez-vous : une arrivée sans RDV n'y échappe pas
+        IF NOT EXISTS (SELECT 1 FROM passage p
+                         JOIN vehicule v ON v.id = p.vehicule_id
+                         JOIN quai q ON q.id = p.quai_id AND q.type IN (p.sens, 'mixte')
+                         JOIN quai_type_vehicule qtv ON qtv.quai_id = q.id AND qtv.type_vehicule_id = v.type_vehicule_id
+                        WHERE p.id = NEW.passage_id) THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ce quai n''est pas compatible avec ce véhicule ou ce sens de flux.';
+        END IF;
     END IF;
 END$$
 
@@ -257,7 +279,11 @@ END$$
 -- =====================================================================
 CREATE TRIGGER tr_mouvement_bi BEFORE INSERT ON mouvement_stock FOR EACH ROW
 BEGIN
-    DECLARE v_dispo INT UNSIGNED DEFAULT 0;
+    DECLARE v_dispo      INT UNSIGNED DEFAULT 0;
+    DECLARE v_present    INT UNSIGNED DEFAULT 0;
+    DECLARE v_article_id INT UNSIGNED;
+    DECLARE v_poids      DECIMAL(8,3);
+    DECLARE v_ajout      INT;
 
     IF NEW.numero IS NULL OR NEW.numero = '' THEN
         SET NEW.numero = CONCAT('MVT-', LPAD(NEXT VALUE FOR seq_mouvement, 7, '0'));
@@ -287,6 +313,21 @@ BEGIN
               JOIN article ar        ON ar.id = l.article_id AND ar.condition_stockage_id = zc.condition_stockage_id
              WHERE e.id = NEW.emplacement_destination_id) THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La zone de destination n''est pas compatible avec les conditions de stockage de l''article.';
+        END IF;
+        -- capacité de l'emplacement (un ajustement constate le réel : il n'est pas contrôlé)
+        IF NEW.type IN ('entree', 'transfert') THEN
+            SELECT l.article_id, ar.poids_kg INTO v_article_id, v_poids
+              FROM lot l JOIN article ar ON ar.id = l.article_id WHERE l.id = NEW.lot_id;
+            SELECT COALESCE(MAX(quantite), 0) INTO v_present FROM stock
+             WHERE emplacement_id = NEW.emplacement_destination_id AND lot_id = NEW.lot_id;
+            SET v_ajout = CAST(fn_palettes(v_article_id, v_present + NEW.quantite) AS SIGNED)
+                        - CAST(fn_palettes(v_article_id, v_present) AS SIGNED);
+            IF v_ajout > fn_palettes_libres(NEW.emplacement_destination_id) THEN
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Capacité insuffisante : pas assez de palettes libres sur cet emplacement.';
+            END IF;
+            IF NEW.quantite * v_poids > fn_poids_libre(NEW.emplacement_destination_id) THEN
+                SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Capacité insuffisante : poids maximal de l''emplacement dépassé.';
+            END IF;
         END IF;
     END IF;
 END$$
@@ -436,7 +477,7 @@ BEGIN
 END$$
 
 -- Proposition d'emplacements libres et compatibles pour un article :
--- zone autorisée, emplacement non bloqué, capacité suffisante ; on
+-- zone autorisée, emplacement non bloqué, palettes et poids suffisants ; on
 -- privilégie les emplacements contenant déjà l'article, puis les zones
 -- dédiées (les zones polyvalentes servent au débordement), puis le plus juste.
 CREATE PROCEDURE proposer_emplacements(IN p_article_id INT UNSIGNED, IN p_palettes INT UNSIGNED, IN p_limite INT UNSIGNED)
@@ -453,6 +494,7 @@ BEGIN
       JOIN zone_condition zc ON zc.zone_id = z.id
       JOIN article ar        ON ar.id = p_article_id AND ar.condition_stockage_id = zc.condition_stockage_id
      WHERE e.bloque = FALSE
+       AND fn_poids_libre(e.id) >= p_palettes * ar.unites_par_colis * ar.colis_par_palette * ar.poids_kg
     HAVING palettes_libres >= p_palettes
      ORDER BY contient_article DESC, polyvalence ASC, palettes_libres ASC, e.niveau ASC, e.code
      LIMIT p_limite;
@@ -460,7 +502,7 @@ END$$
 
 -- Génération d'une liste de prélèvement pour une commande selon la règle
 -- FIFO (premier entré – premier sorti) ou FEFO (premier périmé – premier sorti).
--- Les quantités déjà réservées par des listes non terminées sont déduites.
+-- Les quantités réservées et pas encore prélevées (déjà sorties du stock sinon) sont déduites.
 CREATE PROCEDURE generer_liste_prelevement(IN p_commande_id INT UNSIGNED, IN p_regle VARCHAR(4), OUT p_liste_id INT UNSIGNED)
 BEGIN
     DECLARE v_fini       BOOLEAN DEFAULT FALSE;
@@ -494,7 +536,7 @@ BEGIN
                        s.quantite - COALESCE((SELECT SUM(lp.quantite_a_prelever) FROM ligne_prelevement lp
                                                 JOIN liste_prelevement li ON li.id = lp.liste_id
                                                WHERE lp.lot_id = s.lot_id AND lp.emplacement_id = s.emplacement_id
-                                                 AND li.statut <> 'terminee'), 0) AS dispo
+                                                 AND li.statut <> 'terminee' AND lp.quantite_prelevee IS NULL), 0) AS dispo
                   FROM stock s
                   JOIN lot l          ON l.id = s.lot_id
                   JOIN emplacement e  ON e.id = s.emplacement_id
@@ -612,18 +654,6 @@ SELECT p.id, p.numero, p.sens, p.rendez_vous_id, v.transporteur_id,
   LEFT JOIN passage_etape fin   ON fin.passage_id = p.id   AND fin.type_etape_id   = (SELECT id FROM type_etape WHERE code = 'FIN_OP')
   LEFT JOIN passage_etape dep   ON dep.passage_id = p.id   AND dep.type_etape_id   = (SELECT id FROM type_etape WHERE code = 'DEPART');
 
--- Temps moyens d'attente / d'immobilisation par transporteur
-CREATE VIEW v_temps_par_transporteur AS
-SELECT t.id AS transporteur_id, t.raison_sociale,
-       COUNT(d.id)                       AS nb_passages,
-       ROUND(AVG(d.attente_min), 1)        AS attente_moy_min,
-       ROUND(AVG(d.immobilisation_min), 1) AS immobilisation_moy_min,
-       SUM(d.retard_min > 15)             AS nb_retards
-  FROM transporteur t
-  JOIN v_passage_durees d ON d.transporteur_id = t.id
- WHERE d.depart IS NOT NULL
- GROUP BY t.id, t.raison_sociale;
-
 -- Détail du stock (une ligne par lot et par emplacement)
 CREATE VIEW v_stock_detail AS
 SELECT s.emplacement_id, s.lot_id, e.code AS emplacement, z.id AS zone_id, z.code AS zone,
@@ -652,18 +682,6 @@ SELECT z.id, z.code, z.libelle,
   LEFT JOIN (SELECT zone_id, SUM(palettes) AS occupees FROM v_stock_detail GROUP BY zone_id) occ
          ON occ.zone_id = z.id;
 
--- Taux d'écart en réception par fournisseur
-CREATE VIEW v_taux_ecart_fournisseur AS
-SELECT f.id AS fournisseur_id, f.raison_sociale,
-       COUNT(DISTINCT rc.id) AS nb_receptions,
-       COUNT(DISTINCT e.reception_id) AS nb_receptions_avec_ecart,
-       ROUND(100 * COUNT(DISTINCT e.reception_id) / COUNT(DISTINCT rc.id), 1) AS taux_ecart
-  FROM fournisseur f
-  JOIN avis_expedition av ON av.fournisseur_id = f.id
-  JOIN reception rc       ON rc.avis_id = av.id AND rc.statut = 'cloturee'
-  LEFT JOIN ecart e       ON e.reception_id = rc.id
- GROUP BY f.id, f.raison_sociale;
-
 -- Lots en stock dont la date limite approche (30 jours)
 CREATE VIEW v_lots_proches_dlc AS
 SELECT l.id AS lot_id, l.code_lot, ar.reference, ar.designation, l.date_limite_conso,
@@ -675,19 +693,3 @@ SELECT l.id AS lot_id, l.code_lot, ar.reference, ar.designation, l.date_limite_c
  WHERE l.date_limite_conso IS NOT NULL
    AND l.date_limite_conso <= CURRENT_DATE + INTERVAL 30 DAY
  GROUP BY l.id, l.code_lot, ar.reference, ar.designation, l.date_limite_conso;
-
--- Productivité des préparateurs
-CREATE VIEW v_productivite_preparateur AS
-SELECT u.id AS utilisateur_id, CONCAT(u.prenom, ' ', u.nom) AS preparateur,
-       COUNT(*)            AS nb_listes,
-       SUM(x.nb_lignes)    AS nb_lignes,
-       SUM(x.unites)       AS unites_prelevees,
-       ROUND(SUM(x.nb_lignes) / NULLIF(SUM(x.duree_min) / 60, 0), 1) AS lignes_par_heure
-  FROM utilisateur u
-  JOIN (SELECT li.id, li.preparateur_id, COUNT(*) AS nb_lignes,
-               SUM(lp.quantite_prelevee) AS unites,
-               TIMESTAMPDIFF(MINUTE, li.debut, li.fin) AS duree_min
-          FROM liste_prelevement li JOIN ligne_prelevement lp ON lp.liste_id = li.id
-         WHERE li.statut = 'terminee'
-         GROUP BY li.id, li.preparateur_id, li.debut, li.fin) x ON x.preparateur_id = u.id
- GROUP BY u.id, u.prenom, u.nom;

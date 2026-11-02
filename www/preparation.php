@@ -33,10 +33,10 @@ if (est_post()) {
             $n = requete("UPDATE liste_prelevement SET preparateur_id = ? WHERE id = ? AND statut = 'a_faire'", [$prep, $_POST['affecter']])->rowCount();
             flash($n ? 'succes' : 'erreur', $n ? "Liste affectée à {$preparateurs[$prep]}." : 'Seule une liste non commencée peut être réaffectée.');
         }
+    } catch (PDOException $e) {   // avant RuntimeException, dont elle hérite
+        flash('erreur', message_erreur($e));
     } catch (RuntimeException $e) {
         flash('erreur', $e->getMessage());
-    } catch (PDOException $e) {
-        flash('erreur', message_erreur($e));
     }
     rediriger('preparation.php');
 }

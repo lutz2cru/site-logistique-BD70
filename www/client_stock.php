@@ -16,7 +16,7 @@ $articles = lignes("SELECT ar.id, ar.reference, ar.designation, cs.libelle AS co
                            MIN(CASE WHEN s.lot_id IS NOT NULL THEN l.date_limite_conso END) AS dlc_min,
                            COALESCE((SELECT SUM(lp.quantite_a_prelever) FROM ligne_prelevement lp
                                        JOIN liste_prelevement li ON li.id = lp.liste_id JOIN lot l2 ON l2.id = lp.lot_id
-                                      WHERE l2.article_id = ar.id AND li.statut <> 'terminee'), 0) AS reserve
+                                      WHERE l2.article_id = ar.id AND li.statut <> 'terminee' AND lp.quantite_prelevee IS NULL), 0) AS reserve
                       FROM article ar
                       JOIN condition_stockage cs ON cs.id = ar.condition_stockage_id
                       LEFT JOIN lot l ON l.article_id = ar.id

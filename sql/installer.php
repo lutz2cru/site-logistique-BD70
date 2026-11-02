@@ -29,6 +29,8 @@ $pass = $opts['pass'] ?? '';
 const MOT_DE_PASSE_DEMO = 'demo1234';
 const JOURS_HISTORIQUE  = 60;
 const JOURS_FUTURS      = 7;
+const COMPTE_APPLI      = 'entrepot_app';           // voir www/config.php
+const MOT_DE_PASSE_APPLI = 'Entrepot-BD70-demo';
 
 mt_srand(70);   // données reproductibles
 $debutChrono = microtime(true);
@@ -420,6 +422,7 @@ foreach ($catalogues as $nomClient => $parCondition) {
                 $upc = alea([1, 4, 6, 12, 24]);
                 $cpp = alea([20, 30, 40, 48, 60]);
                 $poids = round(entre(50, 5000) / 1000 * ($upc > 6 ? 0.5 : 1), 3);
+                $cpp = min($cpp, (int) floor(900 / ($upc * $poids)));   // une palette pèse au plus 900 kg
                 $aid = inserer($pdo, 'article', [
                     'reference' => sprintf('ART-%05d', ++$numRef),
                     'designation' => "$produit $format",
@@ -838,6 +841,20 @@ $pdo->exec('SET @utilisateur_id = 1');
 $pdo->exec('UPDATE emplacement SET bloque = TRUE WHERE id IN (SELECT id FROM (SELECT e.id FROM emplacement e LEFT JOIN stock s ON s.emplacement_id = e.id WHERE s.lot_id IS NULL ORDER BY e.id DESC LIMIT 8) x)');
 $pdo->exec("UPDATE quai SET statut = 'hors_service' WHERE id = $quaiHorsService");
 $pdo->commit();
+
+// ---------------------------------------------------------------------
+//  Compte de l'application : moindre privilège
+// ---------------------------------------------------------------------
+// Lecture partout, écriture table par table : ni `stock` ni le journal, tenus par les
+// déclencheurs (qui s'exécutent avec les droits de leur créateur), ni structure.
+foreach (['localhost', '127.0.0.1'] as $origine) {
+    $compte = "'" . COMPTE_APPLI . "'@'$origine'";
+    $pdo->exec("CREATE OR REPLACE USER $compte IDENTIFIED BY '" . MOT_DE_PASSE_APPLI . "'");
+    $pdo->exec("GRANT SELECT, EXECUTE ON entrepot.* TO $compte");
+    $ecriture = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'entrepot' AND table_type = 'BASE TABLE'
+                              AND table_name NOT IN ('stock', 'journal_audit', 'journal_audit_archive')")->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($ecriture as $t) { $pdo->exec("GRANT INSERT, UPDATE, DELETE ON entrepot.`$t` TO $compte"); }
+}
 
 // ---------------------------------------------------------------------
 //  Bilan

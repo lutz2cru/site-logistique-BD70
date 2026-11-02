@@ -4,8 +4,8 @@ require __DIR__ . '/includes/layout.php';
 
 exiger_profil('responsable');
 
-$du = filtre('du') ?: date('Y-m-d', strtotime('-30 days'));
-$au = filtre('au') ?: date('Y-m-d');
+$du = filtre_date('du', date('Y-m-d', strtotime('-30 days')));
+$au = filtre_date('au', date('Y-m-d'));
 $periode = [$du, $au];
 const AMPLITUDE_MIN = 15 * 60;   // ouverture des quais : 6 h – 21 h
 
@@ -137,7 +137,7 @@ entete('Indicateurs de pilotage');
 </div>
 
 <?php ob_start(); ?>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="assets/chart.umd.min.js"></script>
 <script>
 const bleu = '#1f5fbf', violet = '#6941c6', vert = '#1a7f4b', orange = '#e69b23', rouge = '#b42318';
 const jours = <?= $json($parJour) ?>, quais = <?= $json($parQuai) ?>, zones = <?= $json($zones) ?>, transp = <?= $json($parTransporteur) ?>;

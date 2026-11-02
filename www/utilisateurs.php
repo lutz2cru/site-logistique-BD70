@@ -34,12 +34,12 @@ if (est_post()) {
             requete('DELETE FROM utilisateur WHERE id = ?', [$id]);
             flash('succes', 'Compte supprimé.');
         }
-    } catch (RuntimeException $e) {
-        flash('erreur', $e->getMessage());
-    } catch (PDOException $e) {
+    } catch (PDOException $e) {   // avant RuntimeException, dont elle hérite
         flash('erreur', ($e->errorInfo[1] ?? 0) === 1451
             ? 'Ce compte a un historique (réceptions, mouvements…) : désactivez-le plutôt que de le supprimer.'
             : message_erreur($e));
+    } catch (RuntimeException $e) {
+        flash('erreur', $e->getMessage());
     }
     rediriger('utilisateurs.php?' . http_build_query($_GET));
 }
