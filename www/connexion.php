@@ -49,6 +49,7 @@ entete('Connexion');
             <button type="submit">Se connecter</button>
         </form>
         <p>Pas encore de compte ? <a href="inscription.php">Demander un accès</a></p>
+        <p class="discret">Chauffeurs : <a href="borne.php">déclarer son arrivée</a> · <a href="ecran.php">écran d'appel</a></p>
     </div>
 </div>
 <?php pied();

@@ -47,7 +47,7 @@ entete("Passage {$p['numero']}", 'passages.php');
                 <tr><th>Réception</th><td><a href="reception.php?id=<?= $r['id'] ?>"><?= e($r['numero']) ?></a> <?= pastille($r['statut']) ?></td></tr>
             <?php endforeach; ?>
             <?php foreach ($expeditions as $x): ?>
-                <tr><th>Expédition</th><td><?= e($x['numero']) ?> · <?= $x['commandes'] ?> commande(s), <?= $x['unites'] ?> unité(s) chargée(s)</td></tr>
+                <tr><th>Expédition</th><td><a href="expedition.php?id=<?= $x['id'] ?>"><?= e($x['numero']) ?></a> ·<?= $x['commandes'] ?> commande(s), <?= $x['unites'] ?> unité(s) chargée(s)</td></tr>
             <?php endforeach; ?>
         </table>
     </div>
