@@ -125,11 +125,12 @@ echo "Données de référence...\n";
 $pdo->beginTransaction();
 
 $profils = [
-    'admin'        => ['Administrateur', 'Gestion des comptes, des droits et du référentiel'],
+    'admin'        => ['Administrateur', 'Gestion des comptes, des droits et du journal'],
     'responsable'  => ['Responsable d\'exploitation', 'Planification des quais, pilotage de l\'activité'],
     'accueil'      => ['Agent d\'accueil', 'Poste de garde : arrivées et départs des camions'],
     'magasinier'   => ['Magasinier / Préparateur', 'Réception, stockage et préparation des commandes'],
     'transporteur' => ['Transporteur', 'Accès limité à la prise de rendez-vous'],
+    'client'       => ['Client propriétaire', 'Portail client : stock, commandes et suivi des expéditions'],
 ];
 $profilId = [];
 foreach ($profils as $code => [$lib, $desc]) {
@@ -367,6 +368,14 @@ foreach ($nomsClients as $nom) {
         'code_postal' => $cp, 'ville' => $ville, 'telephone' => telephone(),
         'email' => 'logistique@' . strtolower(preg_replace('/[^a-z]/i', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nom))) . '.test']);
 }
+// comptes du portail client (le compte de démonstration représente la Fromagerie Comtoise)
+inserer($pdo, 'utilisateur', ['email' => 'client@entrepot.test', 'nom' => 'Vuillemin', 'prenom' => 'Claire',
+    'telephone' => telephone(), 'mot_de_passe_hash' => $hash, 'actif' => 1, 'profil_id' => $profilId['client'], 'client_id' => $clients[1]]);
+foreach ([0, 2, 5] as $i) {
+    inserer($pdo, 'utilisateur', ['email' => 'portail@' . strtolower(preg_replace('/[^a-z]/i', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nomsClients[$i]))) . '.test',
+        'nom' => alea($noms), 'prenom' => alea($prenoms), 'mot_de_passe_hash' => $hash, 'actif' => 1,
+        'profil_id' => $profilId['client'], 'client_id' => $clients[$i]]);
+}
 $fournisseurs = [];
 for ($i = 1; $i <= 30; $i++) {
     [$adr, $cp, $ville] = adresse($rues, $villes);
@@ -375,34 +384,52 @@ for ($i = 1; $i <= 30; $i++) {
         'code_postal' => $cp, 'ville' => $ville, 'telephone' => telephone(), 'email' => "commandes$i@fournisseur.test"]);
 }
 
-$familles = [
-    'Ambiant' => [['Pack eau minérale', 'Jus de pomme', 'Biscuits', 'Café moulu', 'Pâtes', 'Conserves de légumes',
-        'Papier A4', 'Cartons de déménagement', 'Plaquettes de frein', 'Filtre à huile', 'Perceuse', 'Peinture',
-        'Lessive', 'Shampoing', 'Jouet en bois', 'Grille-pain', 'T-shirt coton', 'Bière blonde', 'Farine', 'Huile d\'olive'],
-        ['500 g', '1 L', '6 x 1,5 L', '250 g', 'carton de 12', 'lot de 5', '2 kg', 'modèle standard', 'grand modèle', 'premium']],
-    'Froid positif' => [['Yaourt nature', 'Comté AOP', 'Beurre doux', 'Crème fraîche', 'Jambon blanc', 'Salade composée',
-        'Lait frais', 'Fromage blanc', 'Vaccin', 'Insuline'], ['x 4', '200 g', '500 g', '1 kg', 'tranché', 'bio']],
-    'Surgelé' => [['Pizza surgelée', 'Frites', 'Glace vanille', 'Légumes poêlés', 'Poisson pané', 'Croissants crus'],
-        ['1 kg', '2,5 kg', 'x 10', 'familial', '750 g']],
-    'Dangereux' => [['Solvant industriel', 'Aérosol peinture', 'Acide chlorhydrique', 'Batterie lithium', 'Bouteille de gaz', 'Diluant'],
-        ['5 L', '20 L', '400 mL', 'bidon', 'carton de 6']],
+// catalogue propre à chaque client propriétaire : produits par condition de stockage
+$catalogues = [
+    'Brasserie de l\'Est'         => ['Ambiant' => ['Bière blonde', 'Bière ambrée', 'Bière de Noël', 'Limonade artisanale', 'Sirop de houblon']],
+    'Fromagerie Comtoise'        => ['Froid positif' => ['Comté AOP', 'Morbier AOP', 'Mont d\'Or', 'Cancoillotte', 'Beurre doux', 'Crème fraîche'],
+                                     'Ambiant' => ['Coffret dégustation']],
+    'Peugeot Pièces de Rechange' => ['Ambiant' => ['Plaquettes de frein', 'Filtre à huile', 'Disque de frein', 'Courroie de distribution', 'Amortisseur', 'Balais d\'essuie-glace'],
+                                     'Dangereux' => ['Batterie lithium', 'Liquide de frein']],
+    'BricoVosges'                => ['Ambiant' => ['Perceuse', 'Visserie', 'Peinture murale', 'Ponceuse', 'Mètre ruban'], 'Dangereux' => ['Aérosol peinture', 'Diluant']],
+    'Laiterie du Sundgau'        => ['Froid positif' => ['Lait frais', 'Yaourt nature', 'Fromage blanc', 'Crème dessert', 'Beurre demi-sel']],
+    'Pharma Rhin'                => ['Froid positif' => ['Vaccin', 'Insuline'], 'Ambiant' => ['Paracétamol', 'Pansements', 'Gel hydroalcoolique', 'Sirop pour la toux']],
+    'Jouets Montbéliard'         => ['Ambiant' => ['Jouet en bois', 'Puzzle', 'Jeu de société', 'Peluche', 'Petite voiture', 'Train électrique']],
+    'Chimie Belfortaine'         => ['Dangereux' => ['Solvant industriel', 'Acide chlorhydrique', 'Soude caustique', 'Bouteille de gaz'], 'Ambiant' => ['Gants nitrile']],
+    'Épicerie Fine d\'Alsace'     => ['Ambiant' => ['Huile d\'olive', 'Moutarde', 'Confiture', 'Pain d\'épices', 'Café moulu', 'Pâtes'], 'Froid positif' => ['Foie gras']],
+    'Surgelés du Jura'           => ['Surgelé' => ['Pizza surgelée', 'Frites', 'Glace vanille', 'Légumes poêlés', 'Poisson pané', 'Croissants crus']],
+    'Électroménager Doubs'       => ['Ambiant' => ['Grille-pain', 'Bouilloire', 'Aspirateur', 'Micro-ondes', 'Cafetière', 'Robot pâtissier']],
+    'Textile Lorraine'           => ['Ambiant' => ['T-shirt coton', 'Drap de lit', 'Serviette éponge', 'Torchon', 'Pull laine']],
+    'Cosmétiques Vosgiens'       => ['Ambiant' => ['Shampoing', 'Savon', 'Crème hydratante', 'Gel douche'], 'Dangereux' => ['Laque (aérosol)']],
+    'Papeterie Franc-Comtoise'   => ['Ambiant' => ['Papier A4', 'Cartons de déménagement', 'Enveloppes', 'Cahiers', 'Stylos bille']],
 ];
-$repartition = ['Ambiant' => 290, 'Froid positif' => 60, 'Surgelé' => 30, 'Dangereux' => 20];
-$articles = [];   // id => ['cond' => libellé, 'par_palette' => n, 'upc' => unités/colis, 'poids' => kg]
+$formats = [
+    'Ambiant'       => ['500 g', '1 L', 'carton de 12', 'lot de 5', '2 kg', 'modèle standard', 'grand modèle', 'premium'],
+    'Froid positif' => ['x 4', '200 g', '500 g', '1 kg', 'tranché', 'bio'],
+    'Surgelé'       => ['1 kg', '2,5 kg', 'x 10', 'familial', '750 g'],
+    'Dangereux'     => ['5 L', '20 L', '400 mL', 'bidon', 'carton de 6'],
+];
+$articles = [];   // id => ['cond' => libellé, 'client' => id, 'par_palette' => n, 'upc' => unités/colis, 'poids' => kg]
 $numRef = 0;
-foreach ($repartition as $cond => $n) {
-    for ($i = 0; $i < $n; $i++) {
-        $upc = alea([1, 4, 6, 12, 24]);
-        $cpp = alea([20, 30, 40, 48, 60]);
-        $poids = round(entre(50, 5000) / 1000 * ($upc > 6 ? 0.5 : 1), 3);
-        $aid = inserer($pdo, 'article', [
-            'reference' => sprintf('ART-%05d', ++$numRef),
-            'designation' => alea($familles[$cond][0]) . ' ' . alea($familles[$cond][1]),
-            'client_id' => alea($clients), 'condition_stockage_id' => $condId[$cond],
-            'longueur_cm' => entre(10, 60), 'largeur_cm' => entre(10, 40), 'hauteur_cm' => entre(5, 40),
-            'poids_kg' => $poids, 'unites_par_colis' => $upc, 'colis_par_palette' => $cpp,
-        ]);
-        $articles[$aid] = ['cond' => $cond, 'cond_id' => $condId[$cond], 'upc' => $upc, 'par_palette' => $upc * $cpp, 'poids' => $poids];
+foreach ($catalogues as $nomClient => $parCondition) {
+    $clientId = $clients[array_search($nomClient, $nomsClients, true)];
+    foreach ($parCondition as $cond => $produits) {
+        foreach ($produits as $produit) {
+            // chaque produit existe en plusieurs conditionnements
+            foreach ((array) array_rand(array_flip($formats[$cond]), entre(3, 5)) as $format) {
+                $upc = alea([1, 4, 6, 12, 24]);
+                $cpp = alea([20, 30, 40, 48, 60]);
+                $poids = round(entre(50, 5000) / 1000 * ($upc > 6 ? 0.5 : 1), 3);
+                $aid = inserer($pdo, 'article', [
+                    'reference' => sprintf('ART-%05d', ++$numRef),
+                    'designation' => "$produit $format",
+                    'client_id' => $clientId, 'condition_stockage_id' => $condId[$cond],
+                    'longueur_cm' => entre(10, 60), 'largeur_cm' => entre(10, 40), 'hauteur_cm' => entre(5, 40),
+                    'poids_kg' => $poids, 'unites_par_colis' => $upc, 'colis_par_palette' => $cpp,
+                ]);
+                $articles[$aid] = ['cond' => $cond, 'cond_id' => $condId[$cond], 'client' => $clientId, 'upc' => $upc, 'par_palette' => $upc * $cpp, 'poids' => $poids];
+            }
+        }
     }
 }
 // chaque fournisseur livre une sélection d'articles
@@ -593,13 +620,16 @@ function simulerExpedition(PDO $pdo, array $ctx, int $passageId, array $t, bool 
     $taux = array_sum(array_map(fn($e) => $e['cap'] - libres($e, $articles, $lotArticle), $emplacements)) / $capaciteTotale;
     $commandes = [];
     for ($c = 0, $n = entre(1, 3); $c < $n; $c++) {
-        $client = alea($clients);
+        // un client ne commande que ses propres articles
+        $parClient = [];
+        foreach ($enStock as $a) { $parClient[$articles[$a]['client']][] = $a; }
+        $client = alea(array_keys($parClient));
         [$adr, $cp, $ville] = adresse($rues, $villes);
         $dateCmd = $t['ARRIVEE']->modify('-' . entre(1, 4) . ' days');
-        $cmdId = inserer($pdo, 'commande', ['client_id' => $client, 'date_commande' => $dateCmd->format('Y-m-d'),
+        $cmdId = inserer($pdo, 'commande', ['client_id' => $client, 'date_commande' => $dateCmd->format('Y-m-d'), 'canal' => proba(0.3) ? 'portail' : 'edi',
             'expedition_souhaitee' => $t['ARRIVEE']->format('Y-m-d'), 'adresse_livraison' => $adr,
             'code_postal' => $cp, 'ville' => $ville, 'statut' => 'recue']);
-        $choix = (array) array_rand(array_flip($enStock), min(count($enStock), entre(1, 4)));
+        $choix = (array) array_rand(array_flip($parClient[$client]), min(count($parClient[$client]), entre(1, 4)));
         foreach ($choix as $a) {
             // plus l'entrepôt est rempli, plus les commandes sont volumineuses (équilibre des flux)
             $max = max(1, (int) ($stockParArticle[$a] * min(0.9, 0.15 + $taux)));
@@ -722,7 +752,7 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
         $arrivee = $sansMs(plusMin($ev['debut'], $ev['rdv'] ? $retard : 0));
         if ($enCours && $arrivee > $maintenant) { $arrivee = plusMin($maintenant, -entre(5, 30)); }
         $pid = inserer($pdo, 'passage', ['rendez_vous_id' => $rdvId, 'vehicule_id' => $vid, 'chauffeur_id' => $chid, 'sens' => $sens,
-            'observations' => $ev['rdv'] ? null : 'Arrivée sans rendez-vous']);
+            'observations' => $ev['rdv'] ? null : 'Arrivée sans rendez-vous', 'borne' => $ev['rdv'] && proba(0.4) ? 1 : 0]);
         $compteurs['passages']++;
 
         // un camion en cours s'arrête à une étape compatible avec l'heure actuelle
@@ -818,4 +848,4 @@ foreach ($tables as $t) {
     $n = $pdo->query("SELECT COUNT(*) FROM `{$t['table_name']}`")->fetchColumn();
     printf("  %-26s %8d\n", $t['table_name'], $n);
 }
-echo "\nComptes de démonstration (mot de passe : " . MOT_DE_PASSE_DEMO . ") : admin@, responsable@, accueil@, magasinier@, transporteur@entrepot.test\n";
+echo "\nComptes de démonstration (mot de passe : " . MOT_DE_PASSE_DEMO . ") : admin@, responsable@, accueil@, magasinier@, transporteur@, client@entrepot.test\n";

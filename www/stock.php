@@ -108,8 +108,10 @@ entete('Recherche de stock');
             <td class="<?= $jours !== null && $jours <= 7 ? 'retard' : '' ?>"><?= date_fr($r['date_limite_conso']) ?></td>
             <td class="nombre"><?= nombre($r['quantite']) ?></td><td class="nombre"><?= $r['palettes'] ?></td>
             <td class="actions-ligne">
+                <?php if (a_profil('magasinier')): ?>
                 <a class="bouton petit secondaire" href="mouvement_form.php?type=transfert&lot=<?= $r['lot_id'] ?>&emplacement=<?= $r['emplacement_id'] ?>">Transférer</a>
                 <a class="bouton petit discret" href="mouvement_form.php?type=ajustement&lot=<?= $r['lot_id'] ?>&emplacement=<?= $r['emplacement_id'] ?>">Ajuster</a>
+                <?php endif; ?>
             </td>
         </tr>
         <?php endforeach; ?>

@@ -4,7 +4,7 @@ require __DIR__ . '/includes/layout.php';
 
 $u = exiger_profil('responsable', 'accueil', 'transporteur');
 $estTransporteur = $u['profil'] === 'transporteur';
-$peutSaisir = a_profil('accueil', 'transporteur');   // le responsable consulte sans saisir
+$peutSaisir = a_profil('accueil', 'transporteur');   // le responsable ajuste les rendez-vous existants, sans en créer
 
 // Suppression (uniquement un rendez-vous planifié sans passage associé)
 if (est_post() && isset($_POST['supprimer'])) {
@@ -111,7 +111,7 @@ entete('Rendez-vous');
             </td>
             <td class="actions-ligne">
                 <?php if ($r['statut'] === 'planifie'): ?>
-                    <?php if ($peutSaisir): ?><a class="bouton petit secondaire" href="rdv_form.php?id=<?= $r['id'] ?>">Modifier</a><?php endif; ?>
+                    <a class="bouton petit secondaire" href="rdv_form.php?id=<?= $r['id'] ?>">Modifier</a>
                     <?php if (a_profil('accueil') && !$r['passage_id']): ?>
                     <form method="post" onsubmit="return confirm('Supprimer définitivement ce rendez-vous ?')">
                         <?= champ_csrf() ?><button class="petit danger" name="supprimer" value="<?= $r['id'] ?>">Supprimer</button>

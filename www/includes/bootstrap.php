@@ -143,7 +143,8 @@ const STATUTS = [
     'bon' => ['Bon', 'vert'], 'refuse' => ['Refusé', 'rouge'],
     'entree' => ['Entrée', 'vert'], 'sortie' => ['Sortie', 'rouge'], 'transfert' => ['Transfert', 'bleu'], 'ajustement' => ['Ajustement', 'orange'],
     'reception' => ['Réception', 'bleu'], 'expedition' => ['Expédition', 'violet'], 'mixte' => ['Mixte', 'gris'],
-    'a_faire' => ['À faire', 'bleu'], 'terminee' => ['Terminée', 'vert'], 'recue' => ['Reçue', 'bleu'],
+    'a_faire' => ['À faire', 'bleu'], 'terminee' => ['Terminée', 'vert'], 'recue' => ['Reçue', 'bleu'], 'edi' => ['EDI', 'gris'], 'portail' => ['Portail', 'violet'],
+    'en_chargement' => ['En chargement', 'orange'], 'chargee' => ['Chargée', 'bleu'], 'partie' => ['Partie', 'vert'],
     'en_preparation' => ['En préparation', 'orange'], 'preparee' => ['Préparée', 'bleu'], 'expediee' => ['Expédiée', 'vert'], 'annulee' => ['Annulée', 'gris'],
 ];
 

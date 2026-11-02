@@ -3,10 +3,12 @@ require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
 $u = exiger_profil('responsable', 'magasinier');
+$peutSaisir = a_profil('magasinier');   // le responsable consulte, le magasinier saisit
 
 // Démarrage d'une réception pour un camion à quai
 if (est_post() && isset($_POST['passage_id'])) {
     verifier_csrf();
+    if (!$peutSaisir) { exit('Action non autorisée.'); }
     $avis = (int) ($_POST['avis_id'] ?? 0) ?: null;
     try {
         $ok = valeur("SELECT COUNT(*) FROM passage p JOIN type_etape te ON te.id = p.etape_courante_id
@@ -71,11 +73,13 @@ entete('Réceptions');
             <td><strong><?= e($p['quai']) ?></strong></td><td><?= e($p['immatriculation']) ?></td>
             <td><?= e($p['raison_sociale']) ?></td><td><?= e($p['etape']) ?></td>
             <td>
+                <?php if ($peutSaisir): ?>
                 <form method="post" class="actions">
                     <?= champ_csrf() ?><input type="hidden" name="passage_id" value="<?= $p['id'] ?>">
                     <select name="avis_id" style="max-width:380px"><?= options($avisAttendus, null, 'Livraison non annoncée (sans avis)') ?></select>
                     <button class="petit">Démarrer la réception</button>
                 </form>
+                <?php else: ?>À démarrer par le magasinier<?php endif; ?>
             </td>
         </tr>
         <?php endforeach; ?>

@@ -7,8 +7,9 @@ if (utilisateur()) { rediriger('index.php'); }
 // l'administrateur ne peut pas être demandé à l'inscription
 $profils = paires("SELECT code, libelle FROM profil WHERE code <> 'admin' ORDER BY id");
 $transporteurs = paires('SELECT id, raison_sociale FROM transporteur ORDER BY raison_sociale');
+$clients = paires('SELECT id, raison_sociale FROM client ORDER BY raison_sociale');
 
-$v = ['nom' => '', 'prenom' => '', 'email' => '', 'telephone' => '', 'profil' => 'magasinier', 'transporteur_id' => ''];
+$v = ['nom' => '', 'prenom' => '', 'email' => '', 'telephone' => '', 'profil' => 'magasinier', 'transporteur_id' => '', 'client_id' => ''];
 $erreurs = [];
 if (est_post()) {
     verifier_csrf();
@@ -21,6 +22,7 @@ if (est_post()) {
     if ($v['telephone'] !== '' && !preg_match('/^[0-9 +.]{10,20}$/', $v['telephone'])) { $erreurs[] = 'Le numéro de téléphone n\'est pas valide.'; }
     if (!isset($profils[$v['profil']])) { $erreurs[] = 'Profil inconnu.'; }
     if ($v['profil'] === 'transporteur' && !isset($transporteurs[$v['transporteur_id']])) { $erreurs[] = 'Choisissez votre société de transport.'; }
+    if ($v['profil'] === 'client' && !isset($clients[$v['client_id']])) { $erreurs[] = 'Choisissez votre entreprise.'; }
     if (strlen($mdp) < 8 || !preg_match('/\d/', $mdp) || !preg_match('/[a-z]/i', $mdp)) {
         $erreurs[] = 'Le mot de passe doit contenir au moins 8 caractères dont une lettre et un chiffre.';
     }
@@ -30,10 +32,10 @@ if (est_post()) {
     }
 
     if (!$erreurs) {
-        requete('INSERT INTO utilisateur (email, nom, prenom, telephone, mot_de_passe_hash, actif, profil_id, transporteur_id)
-                 VALUES (?, ?, ?, ?, ?, FALSE, (SELECT id FROM profil WHERE code = ?), ?)', [
+        requete('INSERT INTO utilisateur (email, nom, prenom, telephone, mot_de_passe_hash, actif, profil_id, transporteur_id, client_id)
+                 VALUES (?, ?, ?, ?, ?, FALSE, (SELECT id FROM profil WHERE code = ?), ?, ?)', [
             $v['email'], $v['nom'], $v['prenom'], $v['telephone'] ?: null, password_hash($mdp, PASSWORD_DEFAULT),
-            $v['profil'], $v['profil'] === 'transporteur' ? $v['transporteur_id'] : null,
+            $v['profil'], $v['profil'] === 'transporteur' ? $v['transporteur_id'] : null, $v['profil'] === 'client' ? $v['client_id'] : null,
         ]);
         flash('succes', 'Votre demande a été enregistrée. Un administrateur doit valider votre compte avant la première connexion.');
         rediriger('connexion.php');
@@ -59,6 +61,9 @@ entete('Inscription');
             <label class="pleine" id="bloc-transporteur"><span class="requis">Société de transport</span>
                 <select name="transporteur_id"><?= options($transporteurs, $v['transporteur_id'], '— Choisir —') ?></select>
             </label>
+            <label class="pleine" id="bloc-client"><span class="requis">Votre entreprise (client de l'entrepôt)</span>
+                <select name="client_id"><?= options($clients, $v['client_id'], '— Choisir —') ?></select>
+            </label>
             <label><span class="requis">Mot de passe</span><input type="password" name="mot_de_passe" required minlength="8" autocomplete="new-password"></label>
             <label><span class="requis">Confirmation</span><input type="password" name="confirmation" required minlength="8" autocomplete="new-password"></label>
             <button type="submit" class="pleine">Envoyer la demande</button>
@@ -67,9 +72,10 @@ entete('Inscription');
     </div>
 </div>
 <script>
-    // n'affiche le choix de la société que pour le profil « transporteur »
-    const profil = document.getElementById('profil'), bloc = document.getElementById('bloc-transporteur');
-    const maj = () => bloc.style.display = profil.value === 'transporteur' ? '' : 'none';
+    // n'affiche le choix de la société que pour les profils « transporteur » et « client »
+    const profil = document.getElementById('profil');
+    const blocs = {transporteur: document.getElementById('bloc-transporteur'), client: document.getElementById('bloc-client')};
+    const maj = () => Object.entries(blocs).forEach(([code, bloc]) => bloc.style.display = profil.value === code ? '' : 'none');
     profil.addEventListener('change', maj); maj();
 </script>
 <?php pied();

@@ -2,7 +2,7 @@
 require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
-$u = exiger_profil('responsable', 'magasinier');
+$u = exiger_profil('magasinier');
 
 $type = $_GET['type'] ?? 'transfert';
 if (!in_array($type, ['entree', 'transfert', 'ajustement'], true)) { $type = 'transfert'; }

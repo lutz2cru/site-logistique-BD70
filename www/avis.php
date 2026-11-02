@@ -3,9 +3,11 @@ require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
 exiger_profil('responsable', 'magasinier');
+$peutSaisir = a_profil('magasinier');   // le responsable consulte, le magasinier saisit
 
 if (est_post()) {
     verifier_csrf();
+    if (!$peutSaisir) { exit('Action non autorisée.'); }
     try {
         if (isset($_POST['supprimer'])) {
             $n = requete("DELETE FROM avis_expedition WHERE id = ? AND statut <> 'recu'
@@ -42,7 +44,7 @@ entete('Avis d\'expédition');
 ?>
 <div class="entete-page">
     <span class="discret">Annonces de livraison envoyées par les fournisseurs (liste des articles et quantités attendues).</span>
-    <a class="bouton" href="avis_form.php">+ Nouvel avis</a>
+    <?php if ($peutSaisir): ?><a class="bouton" href="avis_form.php">+ Nouvel avis</a><?php endif; ?>
 </div>
 <div class="carte">
     <form class="filtres" method="get">
@@ -66,7 +68,7 @@ entete('Avis d\'expédition');
             <td class="actions-ligne">
                 <?php if ($a['reception_id']): ?>
                     <a class="bouton petit discret" href="reception.php?id=<?= $a['reception_id'] ?>">Réception</a>
-                <?php elseif ($a['statut'] === 'attendu'): ?>
+                <?php elseif ($peutSaisir && $a['statut'] === 'attendu'): ?>
                     <a class="bouton petit secondaire" href="avis_form.php?id=<?= $a['id'] ?>">Modifier</a>
                     <form method="post"><?= champ_csrf() ?><button class="petit discret" name="annuler" value="<?= $a['id'] ?>">Annuler</button></form>
                     <form method="post" onsubmit="return confirm('Supprimer cet avis ?')"><?= champ_csrf() ?><button class="petit danger" name="supprimer" value="<?= $a['id'] ?>">Supprimer</button></form>

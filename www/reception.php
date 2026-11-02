@@ -3,6 +3,7 @@ require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
 $u = exiger_profil('responsable', 'magasinier');
+$peutSaisir = a_profil('magasinier');   // le responsable consulte, le magasinier saisit
 
 $id = (int) ($_GET['id'] ?? 0);
 $rec = ligne("SELECT r.*, a.numero AS avis, a.livraison_prevue, f.raison_sociale AS fournisseur, p.numero AS passage, p.id AS passage_id,
@@ -22,6 +23,7 @@ $erreurs = [];
 // ---------------------------------------------------------------------
 if (est_post()) {
     verifier_csrf();
+    if (!$peutSaisir) { exit('Action non autorisée.'); }
     $action = $_POST['action'] ?? '';
     $pdo = db();
     try {
@@ -129,7 +131,7 @@ entete("Réception {$rec['numero']}", 'receptions.php');
 <div class="carte">
     <h2>
         <span><?= pastille($rec['statut']) ?> Avis <?= e($rec['avis'] ?? '— livraison non annoncée') ?> <?= $rec['fournisseur'] ? '· ' . e($rec['fournisseur']) : '' ?></span>
-        <?php if ($enCours): ?>
+        <?php if ($enCours && $peutSaisir): ?>
         <form method="post" onsubmit="return confirm('Clôturer la réception ? Les écarts seront calculés automatiquement.')">
             <?= champ_csrf() ?><button name="action" value="cloturer">Clôturer la réception</button>
         </form>
@@ -159,7 +161,7 @@ entete("Réception {$rec['numero']}", 'receptions.php');
         <?php endif; ?>
     </div>
 
-    <?php if ($enCours): ?>
+    <?php if ($enCours && $peutSaisir): ?>
     <div class="carte">
         <h2>Enregistrer un lot reçu</h2>
         <form method="post" class="formulaire">
@@ -198,10 +200,10 @@ entete("Réception {$rec['numero']}", 'receptions.php');
             <td class="nombre"><?= nombre($l['range_qte']) ?></td>
             <td><small><?= e($l['emplacements']) ?></small></td>
             <td class="actions-ligne">
-                <?php if ($reste > 0 && $l['etat_palette'] !== 'refuse'): ?>
+                <?php if ($peutSaisir && $reste > 0 && $l['etat_palette'] !== 'refuse'): ?>
                     <a class="bouton petit" href="mouvement_form.php?type=entree&lot=<?= $l['id'] ?>&retour=<?= urlencode("reception.php?id=$id") ?>">Ranger (<?= nombre($reste) ?>)</a>
                 <?php endif; ?>
-                <?php if ($enCours && !$l['range_qte']): ?>
+                <?php if ($peutSaisir && $enCours && !$l['range_qte']): ?>
                 <form method="post" onsubmit="return confirm('Retirer ce lot ?')">
                     <?= champ_csrf() ?><input type="hidden" name="lot_id" value="<?= $l['id'] ?>">
                     <button class="petit danger" name="action" value="supprimer_lot">Retirer</button>
@@ -223,18 +225,19 @@ entete("Réception {$rec['numero']}", 'receptions.php');
             <tr><th></th><th>Numéro</th><th>Article</th><th>Type</th><th class="nombre">Quantité</th><th>Description</th><th>Réserve</th></tr>
             <?php foreach ($ecarts as $ec): ?>
             <tr>
-                <td><?php if (!$ec['reserve_id']): ?><input type="checkbox" name="ecarts[]" value="<?= $ec['id'] ?>"><?php endif; ?></td>
+                <td><?php if ($peutSaisir && !$ec['reserve_id']): ?><input type="checkbox" name="ecarts[]" value="<?= $ec['id'] ?>"><?php endif; ?></td>
                 <td><?= e($ec['numero']) ?></td>
                 <td><strong><?= e($ec['reference']) ?></strong> <?= e($ec['designation']) ?></td>
                 <td><?= pastille($ec['type']) ?></td>
                 <td class="nombre"><?= nombre($ec['quantite']) ?></td>
                 <td><small><?= e($ec['description']) ?></small></td>
                 <td><?php if ($ec['reserve_id']): ?>
-                    <?= e($ec['reserve']) ?> <?= $ec['transmise'] ? pastille('recu') : '<button class="petit discret" name="action" value="transmettre" onclick="this.form.reserve_id.value=' . $ec['reserve_id'] . '">Marquer transmise</button>' ?>
+                    <?= e($ec['reserve']) ?> <?= $ec['transmise'] ? pastille('recu') : ($peutSaisir ? '<button class="petit discret" name="action" value="transmettre" onclick="this.form.reserve_id.value=' . $ec['reserve_id'] . '">Marquer transmise</button>' : '') ?>
                 <?php endif; ?></td>
             </tr>
             <?php endforeach; ?>
         </table></div>
+        <?php if ($peutSaisir): ?>
         <input type="hidden" name="reserve_id" value="">
         <h3>Émettre une réserve auprès du transporteur pour les écarts cochés</h3>
         <div class="filtres">
@@ -242,9 +245,11 @@ entete("Réception {$rec['numero']}", 'receptions.php');
             <label class="case" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="transmise" checked> transmise au chauffeur</label>
             <button name="action" value="reserve" class="secondaire">Émettre la réserve</button>
         </div>
+        <?php endif; ?>
     </form>
     <?php endif; ?>
 
+    <?php if ($peutSaisir): ?>
     <h3>Déclarer un écart manuellement</h3>
     <form method="post" class="filtres">
         <?= champ_csrf() ?><input type="hidden" name="action" value="declarer_ecart">
@@ -254,5 +259,6 @@ entete("Réception {$rec['numero']}", 'receptions.php');
         <label style="flex:1">Description<input name="description" maxlength="255"></label>
         <button class="secondaire">Déclarer</button>
     </form>
+    <?php endif; ?>
 </div>
 <?php pied();

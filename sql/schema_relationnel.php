@@ -55,6 +55,7 @@ $md .= "- Chaque attribut non clé dépend de toute la clé et uniquement d'elle
 $md .= "- Les coordonnées (adresse, code postal, ville) sont stockées telles qu'imprimées sur les documents ; la ville n'est pas déduite du code postal (plusieurs communes partagent un même code).\n";
 $md .= "- Trois dénormalisations sont assumées et maintenues **uniquement par déclencheur** : `passage.etape_courante_id` (dernière ligne de `passage_etape`), `quai.statut` (occupé / libre) et la table `stock` (synthèse de `mouvement_stock`). Elles évitent des agrégations coûteuses dans les écrans temps réel (voir `rapport_performances.md`).\n";
 $md .= "- `passage.sens` peut paraître redondant avec `rendez_vous.sens`, mais il est indispensable pour les arrivées sans rendez-vous (`rendez_vous_id` NULL).\n";
+$md .= "- L'entité « Entrée de journal » donne `journal_audit`, doublée de `journal_audit_archive` pour l'archivage nocturne. L'association « Déclencher » y devient `utilisateur_id`, volontairement sans clé étrangère : le journal doit survivre à la suppression d'un compte, et il reste NULL pour les traitements programmés.\n";
 
 @mkdir(__DIR__ . '/../docs');
 file_put_contents(__DIR__ . '/../docs/schema_relationnel.md', $md);

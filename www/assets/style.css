@@ -175,3 +175,18 @@ input[type=checkbox] { width: 16px; height: 16px; }
     .carte { border: none; padding: 0; }
     body { background: #fff; }
 }
+
+/* Borne d'accueil en libre-service et écran d'appel du parking */
+.borne .carte { max-width: 560px; }
+.borne input { font-size: 20px; padding: 12px; text-transform: uppercase; }
+.borne button, .borne .bouton { font-size: 18px; padding: 12px 18px; }
+.borne .gros { font-size: 18px; }
+.borne ol { padding-left: 20px; line-height: 1.8; }
+body.ecran-appel { background: #18212f; color: #fff; padding: 24px; font-size: 22px; }
+.ecran-appel header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1f5fbf; margin-bottom: 18px; }
+.ecran-appel h1 { font-size: 32px; } .ecran-appel h2 { font-size: 20px; color: #9db8e6; margin: 18px 0 8px; text-transform: uppercase; }
+.ecran-appel table { width: 100%; border-collapse: collapse; }
+.ecran-appel td { padding: 10px 12px; border-bottom: 1px solid #2c3a50; }
+.ecran-appel .immat { font-family: monospace; font-size: 30px; font-weight: 700; letter-spacing: 2px; }
+.ecran-appel .quai { font-size: 30px; font-weight: 700; color: #7ee2a8; }
+.ecran-appel .discret, .ecran-appel .vide { color: #9aa7bb; }

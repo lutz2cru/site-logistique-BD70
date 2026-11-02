@@ -101,8 +101,10 @@ entete('Emplacements et remplissage');
             <td><?= e($s['client']) ?></td><td><?= date_fr($s['date_limite_conso']) ?></td>
             <td class="nombre"><?= nombre($s['quantite']) ?></td><td class="nombre"><?= $s['palettes'] ?></td>
             <td class="actions-ligne">
+                <?php if (a_profil('magasinier')): ?>
                 <a class="bouton petit secondaire" href="mouvement_form.php?type=transfert&lot=<?= $s['lot_id'] ?>&emplacement=<?= $detail['id'] ?>&retour=<?= urlencode("emplacements.php?allee=$alleeId&emplacement={$detail['id']}") ?>">Transférer</a>
                 <a class="bouton petit discret" href="mouvement_form.php?type=ajustement&lot=<?= $s['lot_id'] ?>&emplacement=<?= $detail['id'] ?>&retour=<?= urlencode("emplacements.php?allee=$alleeId&emplacement={$detail['id']}") ?>">Ajuster</a>
+                <?php endif; ?>
             </td>
         </tr>
         <?php endforeach; ?>

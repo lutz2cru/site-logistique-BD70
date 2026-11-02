@@ -70,6 +70,8 @@ CREATE TABLE utilisateur (
     actif             BOOLEAN          NOT NULL DEFAULT FALSE, -- compte validé par un administrateur
     profil_id         TINYINT UNSIGNED NOT NULL,
     transporteur_id   INT UNSIGNED     NULL,              -- renseigné pour le profil « transporteur »
+    client_id         INT UNSIGNED     NULL,              -- renseigné pour le profil « client » (clé étrangère ajoutée après la table client)
+    CONSTRAINT ck_utilisateur_rattachement CHECK (transporteur_id IS NULL OR client_id IS NULL),
     CONSTRAINT fk_utilisateur_profil       FOREIGN KEY (profil_id)       REFERENCES profil (id),
     CONSTRAINT fk_utilisateur_transporteur FOREIGN KEY (transporteur_id) REFERENCES transporteur (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
@@ -227,6 +229,7 @@ CREATE TABLE passage (
     -- déclencheur pour éviter une sous-requête dans chaque écran temps réel.
     etape_courante_id TINYINT UNSIGNED NULL,
     observations   VARCHAR(255)      NULL,
+    borne          BOOLEAN           NOT NULL DEFAULT FALSE, -- arrivée déclarée par le chauffeur à la borne
     CONSTRAINT fk_passage_rdv       FOREIGN KEY (rendez_vous_id)    REFERENCES rendez_vous (id) ON DELETE SET NULL,
     CONSTRAINT fk_passage_vehicule  FOREIGN KEY (vehicule_id)       REFERENCES vehicule (id),
     CONSTRAINT fk_passage_chauffeur FOREIGN KEY (chauffeur_id)      REFERENCES chauffeur (id),
@@ -261,6 +264,10 @@ CREATE TABLE client (
     CONSTRAINT ck_client_siret CHECK (siret REGEXP '^[0-9]{14}$'),
     CONSTRAINT ck_client_cp    CHECK (code_postal REGEXP '^[0-9]{5}$')
 ) ENGINE=InnoDB;
+
+-- Compte du portail client : un utilisateur peut représenter un client propriétaire
+ALTER TABLE utilisateur
+    ADD CONSTRAINT fk_utilisateur_client FOREIGN KEY (client_id) REFERENCES client (id) ON DELETE SET NULL;
 
 CREATE TABLE condition_stockage (
     id              TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -488,6 +495,7 @@ CREATE TABLE commande (
     code_postal          CHAR(5)      NOT NULL,
     ville                VARCHAR(80)  NOT NULL,
     statut               ENUM('recue','en_preparation','preparee','expediee','annulee') NOT NULL DEFAULT 'recue',
+    canal                ENUM('edi','portail') NOT NULL DEFAULT 'edi', -- échange informatisé ou saisie sur le portail client
     CONSTRAINT fk_commande_client FOREIGN KEY (client_id) REFERENCES client (id),
     CONSTRAINT ck_commande_dates CHECK (expedition_souhaitee >= date_commande),
     INDEX ix_commande_expedition (expedition_souhaitee)

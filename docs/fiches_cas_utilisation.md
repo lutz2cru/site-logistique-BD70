@@ -26,7 +26,7 @@ Ils ont été choisis parce qu'ils portent les règles métier les plus riches e
 | Responsables | RAZEK, TELLITEL, LUTZ |
 | Version | 1.0 |
 
-**Séquencement** : le cas commence quand le chauffeur se présente devant la borne du poste de garde. Il inclut « Contrôler le chauffeur (permis, transporteur) » (`«include»`).
+**Séquencement** : le cas commence quand le chauffeur se présente devant la borne du poste de garde. Il inclut « Contrôler le chauffeur (permis, transporteur) » (`«include»`). Il est étendu par « Signaler un retard » (`«extend»`) sous la condition [retard].
 
 **Préconditions**
 - Un rendez-vous *planifié* existe pour aujourd'hui, au nom du transporteur du chauffeur.
@@ -45,7 +45,7 @@ Ils ont été choisis parce qu'ils portent les règles métier les plus riches e
 - *A1 – Informations incorrectes* (étape 2 ou 3) : la borne affiche un message volontairement générique, sans préciser quelle donnée est fausse, et invite le chauffeur à se présenter à l'agent d'accueil. Fin du cas.
 - *A2 – Permis expiré* (étape 4) : l'accès est refusé et le chauffeur est renvoyé vers l'agent d'accueil. Fin du cas.
 - *A3 – Arrivée trop tôt* (plus de 2 h avant le créneau) : la borne indique l'heure du rendez-vous et n'enregistre rien. Fin du cas.
-- *A4 – Retard* (plus de 15 min après le début du créneau) : l'arrivée est enregistrée, mais la borne prévient que le quai pourra être réattribué.
+- *A4 – Retard* (plus de 15 min après le début du créneau) : extension « Signaler un retard ». L'arrivée est enregistrée, mais la borne prévient que le quai pourra être réattribué.
 
 **Postconditions**
 - Le passage existe, à l'étape « Arrivée au poste de garde ». Il apparaît dans la liste des camions sur site de l'agent d'accueil, signalé « borne ».
@@ -66,7 +66,7 @@ Ils ont été choisis parce qu'ils portent les règles métier les plus riches e
 | Responsables | RAZEK, TELLITEL, LUTZ |
 | Version | 1.0 |
 
-**Séquencement** : le cas commence quand un camion se présente au poste de garde sans rendez-vous. Il étend le cas « Enregistrer l'arrivée d'un camion » (`«extend»`) sous la condition [aucun RDV ce jour]. Il inclut « Choisir un quai libre et compatible » (`«include»`).
+**Séquencement** : le cas commence quand un camion se présente au poste de garde sans rendez-vous. Il étend le cas « Enregistrer l'arrivée d'un camion » (`«extend»`) sous la condition [aucun RDV ce jour].
 
 **Préconditions**
 - L'agent d'accueil est connecté.
@@ -77,7 +77,7 @@ Ils ont été choisis parce qu'ils portent les règles métier les plus riches e
 2. Il sélectionne le véhicule, le chauffeur et le sens du flux (réception ou expédition).
 3. Le système contrôle le chauffeur (cas « Contrôler le chauffeur », inclus dans l'enregistrement de l'arrivée) : il doit appartenir au transporteur du véhicule et son permis doit être valide.
 4. Le système crée le passage, sans rendez-vous, et horodate l'arrivée.
-5. Après le contrôle des documents, l'agent appelle le camion à quai (cas inclus « Choisir un quai libre et compatible »).
+5. Après le contrôle des documents, l'agent appelle le camion à quai (« Appeler un camion à quai », qui inclut « Choisir un quai libre et compatible »).
 6. Le système ne propose que les quais *libres*, compatibles avec le type de véhicule et avec le sens du flux.
 7. L'agent choisit un quai. Le système enregistre l'appel à quai, et le statut du quai passe à « occupé ».
 
@@ -107,7 +107,7 @@ Ils ont été choisis parce qu'ils portent les règles métier les plus riches e
 **Séquencement** : le cas commence quand le préparateur ouvre une liste qui lui est affectée. Il inclut « Consulter ses listes de prélèvement » (`«include»`).
 
 **Préconditions**
-- Le responsable d'exploitation a généré la liste pour une commande. La génération inclut « Choisir les lots à sortir », étendu par « Sortir en FEFO (premier périmé) » ou « Sortir en FIFO (premier entré) ».
+- Le responsable d'exploitation a généré la liste pour une commande. La génération inclut « Choisir les lots à sortir », étendu par « Sortir en FEFO (premier périmé) » [règle FEFO] ou « Sortir en FIFO (premier entré) » [règle FIFO].
 - La liste est affectée au préparateur, par le responsable ou par une prise en charge d'une liste non affectée.
 
 **Enchaînement nominal**

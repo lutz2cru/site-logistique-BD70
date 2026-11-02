@@ -2,11 +2,13 @@
 require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
-$u = exiger_profil('accueil', 'transporteur');
+$u = exiger_profil('responsable', 'accueil', 'transporteur');
 $estTransporteur = $u['profil'] === 'transporteur';
+$estResponsable = $u['profil'] === 'responsable';   // il ajuste le planning, sans créer ni annuler
 
 // Rendez-vous existant (le transporteur ne voit que les siens)
 $id = (int) ($_GET['id'] ?? 0);
+if (!$id && $estResponsable) { rediriger('rdv.php'); }
 $rdv = null;
 if ($id) {
     $rdv = ligne('SELECT r.*, v.transporteur_id FROM rendez_vous r JOIN vehicule v ON v.id = r.vehicule_id WHERE r.id = ?', [$id]);
@@ -40,6 +42,8 @@ if (est_post()) {
     verifier_csrf();
     foreach ($v as $k => $_) { $v[$k] = trim((string) ($_POST[$k] ?? $v[$k])); }
     $action = $_POST['action'] ?? 'enregistrer';
+
+    if ($action === 'annuler' && $estResponsable) { exit('Action non autorisée.'); }
 
     if ($action === 'annuler' && $rdv && $modifiable) {
         $motif = trim($_POST['motif_annulation'] ?? '');
@@ -173,7 +177,7 @@ entete($rdv ? "Rendez-vous {$rdv['numero']}" : 'Nouveau rendez-vous', 'rdv.php')
     </form>
 </div>
 
-<?php if ($rdv && $modifiable): ?>
+<?php if ($rdv && $modifiable && !$estResponsable): ?>
 <div class="carte">
     <h2>Annuler ce rendez-vous</h2>
     <form method="post" class="filtres">

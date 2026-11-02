@@ -41,7 +41,7 @@ if (est_post()) {
 // ---------------------------------------------------------------------
 //  Données affichées
 // ---------------------------------------------------------------------
-$surSite = lignes("SELECT p.id, p.numero, p.sens, p.quai_id, p.rendez_vous_id, p.vehicule_id, v.immatriculation, v.type_vehicule_id,
+$surSite = lignes("SELECT p.id, p.numero, p.sens, p.borne, p.quai_id, p.rendez_vous_id, p.vehicule_id, v.immatriculation, v.type_vehicule_id,
                           tv.libelle AS type_vehicule, t.raison_sociale, CONCAT(c.prenom, ' ', c.nom) AS chauffeur,
                           te.code AS etape, te.libelle AS etape_libelle, te.ordre, q.numero AS quai,
                           r.debut AS rdv_debut, rq.id AS rdv_quai_id, rq.numero AS rdv_quai,
@@ -103,7 +103,7 @@ entete('Camions sur site');
             <td><?= e($p['raison_sociale']) ?><br><small><?= e($p['chauffeur']) ?></small></td>
             <td><?= pastille($p['sens']) ?></td>
             <td><?php if ($p['rdv_debut']): ?><?= heure($p['rdv_debut']) ?> · <?= e($p['rdv_quai']) ?><?php else: ?><span class="pastille orange">Sans RDV</span><?php endif; ?></td>
-            <td><?= heure($p['arrivee']) ?>
+            <td><?= heure($p['arrivee']) ?><?= $p['borne'] ? ' <span class="pastille violet" title="Arrivée déclarée par le chauffeur à la borne">borne</span>' : '' ?>
                 <?php if ($retard !== null && $retard > 15): ?><br><small class="retard">retard <?= duree($retard) ?></small><?php endif; ?></td>
             <td><?= e($p['etape_libelle']) ?><br><small class="<?= $depuis > 45 ? 'retard' : '' ?>">depuis <?= duree($depuis) ?></small></td>
             <td><?= e($p['quai']) ?></td>

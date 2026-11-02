@@ -2,7 +2,7 @@
 require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
-exiger_profil('responsable', 'magasinier');
+exiger_profil('magasinier');
 
 $id = (int) ($_GET['id'] ?? 0);
 $avis = $id ? ligne("SELECT * FROM avis_expedition WHERE id = ? AND statut = 'attendu'", [$id]) : null;
