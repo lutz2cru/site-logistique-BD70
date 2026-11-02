@@ -38,6 +38,23 @@ $v = [
 $erreurs = [];
 $disponibles = null;
 
+/** Quais compatibles et libres sur un créneau (mêmes règles que le déclencheur). */
+function quais_disponibles(array $v, int $rdvId, DateTime $debut, DateTime $fin): array
+{
+    return lignes("SELECT q.id, q.numero, q.type,
+                          GROUP_CONCAT(DISTINCT eq.libelle SEPARATOR ', ') AS equipements
+                     FROM quai q
+                     JOIN quai_type_vehicule qtv ON qtv.quai_id = q.id
+                     JOIN vehicule v ON v.id = ? AND v.type_vehicule_id = qtv.type_vehicule_id
+                     LEFT JOIN quai_equipement qe ON qe.quai_id = q.id
+                     LEFT JOIN equipement eq ON eq.id = qe.equipement_id
+                    WHERE q.statut <> 'hors_service' AND q.type IN (?, 'mixte')
+                      AND NOT EXISTS (SELECT 1 FROM rendez_vous r WHERE r.quai_id = q.id AND r.id <> ?
+                                       AND r.statut IN ('planifie','honore') AND r.debut < ? AND r.fin > ?)
+                    GROUP BY q.id ORDER BY q.type = 'mixte', q.numero",
+        [$v['vehicule_id'], $v['sens'], $rdvId, $fin->format('Y-m-d H:i'), $debut->format('Y-m-d H:i')]);
+}
+
 if (est_post()) {
     verifier_csrf();
     foreach ($v as $k => $_) { $v[$k] = trim((string) ($_POST[$k] ?? $v[$k])); }
@@ -68,20 +85,7 @@ if (est_post()) {
         if (mb_strlen($v['commentaire']) > 255) { $erreurs[] = 'Commentaire trop long (255 caractères max).'; }
 
         if (!$erreurs && $action === 'verifier') {
-            // quais compatibles et libres sur ce créneau (mêmes règles que le déclencheur)
-            $fin = (clone $debut)->modify("+$duree minutes");
-            $disponibles = lignes("SELECT q.id, q.numero, q.type,
-                                          GROUP_CONCAT(DISTINCT eq.libelle SEPARATOR ', ') AS equipements
-                                     FROM quai q
-                                     JOIN quai_type_vehicule qtv ON qtv.quai_id = q.id
-                                     JOIN vehicule v ON v.id = ? AND v.type_vehicule_id = qtv.type_vehicule_id
-                                     LEFT JOIN quai_equipement qe ON qe.quai_id = q.id
-                                     LEFT JOIN equipement eq ON eq.id = qe.equipement_id
-                                    WHERE q.statut <> 'hors_service' AND q.type IN (?, 'mixte')
-                                      AND NOT EXISTS (SELECT 1 FROM rendez_vous r WHERE r.quai_id = q.id AND r.id <> ?
-                                                       AND r.statut IN ('planifie','honore') AND r.debut < ? AND r.fin > ?)
-                                    GROUP BY q.id ORDER BY q.type = 'mixte', q.numero",
-                [$v['vehicule_id'], $v['sens'], $id, $fin->format('Y-m-d H:i'), $debut->format('Y-m-d H:i')]);
+            $disponibles = quais_disponibles($v, $id, $debut, (clone $debut)->modify("+$duree minutes"));
         } elseif (!$erreurs) {
             if (!in_array((int) $v['quai_id'], array_column($quais, 'id'), true)) {
                 $erreurs[] = 'Choisissez un quai (bouton « Vérifier les disponibilités »).';
@@ -101,6 +105,7 @@ if (est_post()) {
                     rediriger('planning.php?date=' . $debut->format('Y-m-d'));
                 } catch (PDOException $e) {
                     $erreurs[] = message_erreur($e);
+                    $disponibles = quais_disponibles($v, $id, $debut, $fin);   // propose un autre quai
                 }
             }
         }

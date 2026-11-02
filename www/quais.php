@@ -4,7 +4,7 @@ require __DIR__ . '/includes/layout.php';
 
 $u = exiger_profil('responsable', 'accueil');
 $gestion = a_profil('responsable');
-$suiviStatut = a_profil('accueil');   // le responsable gère les quais, l'accueil suit leur statut
+$suiviStatut = a_profil('responsable', 'accueil');   // tous deux suivent le statut et peuvent mettre un quai hors service
 
 if (est_post()) {
     verifier_csrf();

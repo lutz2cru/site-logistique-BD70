@@ -31,8 +31,10 @@ function menu(): array
             ['Avis d\'expédition', 'avis.php', ['responsable', 'magasinier']],
         ],
         'Préparation' => [
-            ['Commandes et listes', 'preparation.php', ['responsable']],
+            ['Commandes clients', 'commandes.php', ['responsable']],
+            ['Listes de prélèvement', 'preparation.php', ['responsable']],
             ['Mes listes de prélèvement', 'listes.php', ['magasinier']],
+            ['Colis et expéditions', 'expeditions.php', ['responsable', 'magasinier']],
         ],
         'Stocks' => [
             ['Recherche de stock', 'stock.php', ['responsable', 'magasinier']],

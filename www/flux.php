@@ -3,7 +3,8 @@ require __DIR__ . '/includes/bootstrap.php';
 require __DIR__ . '/includes/layout.php';
 
 $u = exiger_profil('responsable', 'accueil', 'magasinier');
-$peutAgir = a_profil('accueil');   // responsable et magasinier consultent (sauf (dé)chargement)
+$peutAgir = a_profil('accueil');          // poste de garde : contrôle, parking, appel à quai, départ
+$peutCharger = a_profil('magasinier');    // à quai : début et fin du (dé)chargement
 
 $etapes = lignes('SELECT id, code, libelle, ordre FROM type_etape ORDER BY ordre');
 $parCode = array_column($etapes, null, 'code');
@@ -15,12 +16,15 @@ if (est_post()) {
     verifier_csrf();
     $pid = (int) ($_POST['passage_id'] ?? 0);
     $code = $_POST['etape'] ?? '';
-    $autorise = $peutAgir || in_array($code, ['DEBUT_OP', 'FIN_OP'], true);
+    $autorise = in_array($code, ['DEBUT_OP', 'FIN_OP'], true) ? $peutCharger : $peutAgir;
     if (!isset($parCode[$code]) || !$autorise) { exit('Action non autorisée.'); }
 
     $pdo = db();
     try {
         $pdo->beginTransaction();
+        if ($code === 'FIN_OP' && valeur("SELECT COUNT(*) FROM expedition WHERE passage_id = ? AND statut = 'en_chargement'", [$pid])) {
+            throw new RuntimeException('Terminez d\'abord le chargement de l\'expédition.');
+        }
         if ($code === 'APPEL_QUAI') {
             requete('UPDATE passage SET quai_id = ? WHERE id = ?', [(int) ($_POST['quai_id'] ?? 0) ?: null, $pid]);
         }
@@ -28,9 +32,21 @@ if (est_post()) {
         // puis met à jour le statut du quai et du rendez-vous
         requete('INSERT INTO passage_etape (passage_id, type_etape_id, date_heure, commentaire) VALUES (?, ?, NOW(), ?)',
                 [$pid, $parCode[$code]['id'], trim($_POST['commentaire'] ?? '') ?: null]);
+        if ($code === 'DEPART') {
+            // une commande est expédiée quand toutes ses unités quittent le site
+            requete("UPDATE commande c SET c.statut = 'expediee'
+                      WHERE c.statut = 'preparee'
+                        AND EXISTS (SELECT 1 FROM unite_expedition ue JOIN expedition x ON x.id = ue.expedition_id
+                                     WHERE ue.commande_id = c.id AND x.passage_id = ? AND x.statut = 'chargee')
+                        AND NOT EXISTS (SELECT 1 FROM unite_expedition ue WHERE ue.commande_id = c.id AND ue.expedition_id IS NULL)", [$pid]);
+            requete("UPDATE expedition SET statut = 'partie' WHERE passage_id = ? AND statut = 'chargee'", [$pid]);
+        }
         $pdo->commit();
         $numero = valeur('SELECT numero FROM passage WHERE id = ?', [$pid]);
         flash('succes', "$numero : « {$parCode[$code]['libelle']} » enregistré à " . date('H:i') . '.');
+    } catch (RuntimeException $e) {
+        $pdo->rollBack();
+        flash('erreur', $e->getMessage());
     } catch (PDOException $e) {
         $pdo->rollBack();
         flash('erreur', message_erreur($e));
@@ -129,15 +145,22 @@ entete('Camions sur site');
                             echo '<small class="retard">aucun quai compatible libre</small>';
                         }
                     }
-                } elseif ($p['etape'] === 'APPEL_QUAI') {
-                    echo $form('DEBUT_OP', 'Début ' . ($p['sens'] === 'reception' ? 'déchargement' : 'chargement'));
-                } elseif ($p['etape'] === 'DEBUT_OP') {
-                    if ($p['sens'] === 'reception') {
-                        echo $p['reception_id']
-                            ? '<a class="bouton petit secondaire" href="reception.php?id=' . $p['reception_id'] . '">Réception</a> '
-                            : '<a class="bouton petit secondaire" href="receptions.php">Démarrer la réception</a> ';
+                } elseif (in_array($p['etape'], ['APPEL_QUAI', 'DEBUT_OP'], true)) {
+                    $operation = $p['sens'] === 'reception' ? 'déchargement' : 'chargement';
+                    if (!$peutCharger) {
+                        echo "<small>$operation à quai, géré par le magasinier</small>";
+                    } elseif ($p['etape'] === 'APPEL_QUAI') {
+                        echo $form('DEBUT_OP', "Début $operation");
+                    } else {
+                        if ($p['sens'] === 'expedition') {
+                            echo '<a class="bouton petit secondaire" href="expedition.php?passage=' . $p['id'] . '">Charger le camion</a> ';
+                        } else {
+                            echo $p['reception_id']
+                                ? '<a class="bouton petit secondaire" href="reception.php?id=' . $p['reception_id'] . '">Réception</a> '
+                                : '<a class="bouton petit secondaire" href="receptions.php">Démarrer la réception</a> ';
+                        }
+                        echo $form('FIN_OP', "Fin $operation");
                     }
-                    echo $form('FIN_OP', 'Fin ' . ($p['sens'] === 'reception' ? 'déchargement' : 'chargement'));
                 } elseif ($p['etape'] === 'FIN_OP' && $peutAgir) {
                     echo $form('DEPART', 'Départ du site', '', '');
                 }

@@ -146,6 +146,7 @@ const STATUTS = [
     'a_faire' => ['À faire', 'bleu'], 'terminee' => ['Terminée', 'vert'], 'recue' => ['Reçue', 'bleu'], 'edi' => ['EDI', 'gris'], 'portail' => ['Portail', 'violet'],
     'en_chargement' => ['En chargement', 'orange'], 'chargee' => ['Chargée', 'bleu'], 'partie' => ['Partie', 'vert'],
     'en_preparation' => ['En préparation', 'orange'], 'preparee' => ['Préparée', 'bleu'], 'expediee' => ['Expédiée', 'vert'], 'annulee' => ['Annulée', 'gris'],
+    'colis' => ['Colis', 'bleu'], 'palette' => ['Palette', 'violet'],
 ];
 
 function pastille(?string $statut): string
@@ -191,6 +192,20 @@ function liens_pagination(int $page, int $pages): string
         $html .= $p === $page ? "<span class=\"actif\">$p</span>" : '<a href="?' . e(http_build_query($q)) . "\">$p</a>";
     }
     return $html . '</nav>';
+}
+
+/** Articles d'un client ayant du stock disponible (stock physique moins listes en cours), indexés par id. */
+function articles_disponibles(int $clientId): array
+{
+    $articles = [];
+    foreach (lignes("SELECT ar.id, ar.reference, ar.designation,
+                            COALESCE((SELECT SUM(s.quantite) FROM stock s JOIN lot l ON l.id = s.lot_id WHERE l.article_id = ar.id), 0)
+                          - COALESCE((SELECT SUM(lp.quantite_a_prelever) FROM ligne_prelevement lp JOIN liste_prelevement li ON li.id = lp.liste_id
+                                        JOIN lot l ON l.id = lp.lot_id WHERE l.article_id = ar.id AND li.statut <> 'terminee'), 0) AS dispo
+                       FROM article ar WHERE ar.client_id = ? ORDER BY ar.reference", [$clientId]) as $a) {
+        if ($a['dispo'] > 0) { $articles[$a['id']] = $a; }
+    }
+    return $articles;
 }
 
 /** Valeur d'un paramètre GET de filtre (chaîne vide si absent). */

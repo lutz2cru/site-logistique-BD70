@@ -30,14 +30,7 @@ if ($cmd && est_post() && isset($_POST['annuler'])) {
 // ---------------------------------------------------------------------
 if (!$cmd) {
     $client = ligne('SELECT * FROM client WHERE id = ?', [$u['client_id']]);
-    $articles = [];
-    foreach (lignes("SELECT ar.id, ar.reference, ar.designation,
-                            COALESCE((SELECT SUM(s.quantite) FROM stock s JOIN lot l ON l.id = s.lot_id WHERE l.article_id = ar.id), 0)
-                          - COALESCE((SELECT SUM(lp.quantite_a_prelever) FROM ligne_prelevement lp JOIN liste_prelevement li ON li.id = lp.liste_id
-                                        JOIN lot l ON l.id = lp.lot_id WHERE l.article_id = ar.id AND li.statut <> 'terminee'), 0) AS dispo
-                       FROM article ar WHERE ar.client_id = ? ORDER BY ar.reference", [$u['client_id']]) as $a) {
-        if ($a['dispo'] > 0) { $articles[$a['id']] = $a; }
-    }
+    $articles = articles_disponibles($u['client_id']);
     $v = ['expedition_souhaitee' => date('Y-m-d', strtotime('+2 days')), 'adresse_livraison' => $client['adresse'],
           'code_postal' => $client['code_postal'], 'ville' => $client['ville']];
     $lignesSaisies = array_fill(0, NB_LIGNES, ['article_id' => '', 'quantite' => '']);
