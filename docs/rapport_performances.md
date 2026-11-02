@@ -1,44 +1,50 @@
 # Rapport d'analyse des performances
 
-Mesures réalisées le 28/10/2026 à 17:15 sur MariaDB 10.4.32-MariaDB (poste local), base alimentée par `sql/installer.php`.
+Mesures réalisées le 02/11/2026 à 09:42 sur MariaDB 10.4.32-MariaDB (poste local), base alimentée par `sql/installer.php`.
 Chaque requête est exécutée 20 fois après une exécution de chauffe ; le temps retenu est la **médiane** (en millisecondes, récupération des lignes comprise).
 
 ## Volumétrie
 
 | Table | Lignes (estimation InnoDB) |
 |---|---:|
-| `passage_etape` | 22 092 |
-| `mouvement_stock` | 16 290 |
-| `ligne_prelevement` | 11 546 |
-| `lot` | 3 695 |
-| `rendez_vous` | 3 650 |
-| `commande` | 3 333 |
-| `passage` | 3 270 |
-| `reception` | 1 613 |
-| `stock` | 859 |
+| `passage_etape` | 22 727 |
+| `mouvement_stock` | 16 612 |
+| `ligne_prelevement` | 11 849 |
+| `lot` | 3 841 |
+| `rendez_vous` | 3 805 |
+| `commande` | 3 380 |
+| `passage` | 3 348 |
+| `reception` | 1 660 |
+| `stock` | 777 |
 
 ## Requêtes principales
 
 | # | Requête | Temps médian | Sans index | Plan d'exécution |
 |---|---|---:|---:|---|
-| 1 | **Planning d'une journée** — Rendez-vous non annulés du jour, tous quais (planning.php) | 1.41 ms | 3.24 ms (×2.3) | t : index `ix_transporteur_raison` (18 l.) ; v : index `fk_vehicule_transporteur` (1 l.) ; r : index `fk_rdv_vehicule|ix_rdv_debut` (1 (2%) l.) |
-| 2 | **Contrôle de chevauchement** — Test exécuté par le déclencheur à chaque prise de rendez-vous | 0.22 ms | 2.46 ms (×11.4) |  :  ( l.) ; r : index `ix_rdv_quai_creneau` (227 l.) |
-| 3 | **Camions sur site** — Passages dont la dernière étape n'est pas le départ (flux.php) | 2.76 ms | – | v : index `immatriculation` (123 l.) ; p : index `fk_passage_vehicule` (13 l.) ; te : index `PRIMARY` (1 l.) |
-| 4 | **État des quais en temps réel** — Vue v_quai_temps_reel (statut calculé, camion à quai, prochain RDV) | 5.16 ms | – | q : parcours complet (16 l.) ; r : index `ix_rdv_quai_creneau` (1 l.) ; p : index `fk_passage_quai` (102 l.) ; v : index `PRIMARY` (1 l.) |
-| 5 | **Recherche plein texte (1re version)** — MATCH … AGAINST en sous-requête ; comparé à un LIKE '%…%' | 19.37 ms | 4.87 ms (×0.3) | article : index `ft_article_designation` (1 l.) ; ar : index `PRIMARY` (1 l.) ; c : index `PRIMARY` (1 l.) ; z : index `code` (4 l.) |
-| 6 | **Recherche plein texte (version retenue)** — Étape 1 : articles par MATCH … AGAINST (index FULLTEXT) | 0.14 ms | 0.23 ms (×1.7) | article : index `ft_article_designation` (1 l.) |
-| 7 | ↳ Étape 2 : stock des articles trouvés (stock.php) | 3.86 ms | – | z : index `code` (4 l.) ; a : index `fk_allee_zone` (1 l.) ; r : index `fk_rack_allee` (1 l.) ; e : index `fk_emplacement_rack` (1 l.) |
-| 8 | **Historique d'un lot** — Mouvements d'un lot par ordre chronologique (lot.php) | 0.26 ms | 3.45 ms (×13.4) | mouvement_stock : index `ix_mvt_lot_date` (27 l.) |
-| 9 | **Mouvements des 7 derniers jours** — Historique filtré par date (mouvements.php) | 2.10 ms | 3.26 ms (×1.6) | mouvement_stock : index `ix_mvt_date` (2204 l.) |
-| 10 | **Temps moyens par transporteur (30 j)** — Agrégation de v_passage_durees (indicateurs.php) | 6.95 ms | – | v : index `fk_vehicule_transporteur` (123 l.) ; p : index `fk_passage_vehicule` (13 l.) ; arr : index `PRIMARY` (1 l.) ; appel : index `PRIMARY` (1 l.) |
-| 11 | **Remplissage par zone** — Vue v_remplissage_zone (somme des palettes par zone) | 12.54 ms | – | z : parcours complet (4 l.) ; <derived4> : index `key0` (2 l.) ; <derived3> : index `key0` (2 l.) ; z : index `PRIMARY` (1 l.) |
-| 12 | **Taux d'écart par fournisseur** — Vue v_taux_ecart_fournisseur | 5.57 ms | – | <derived2> : parcours complet (30 l.) ; f : parcours complet (30 l.) ; av : index `fk_avis_fournisseur` (1 l.) ; rc : index `fk_reception_avis` (1 l.) |
-| 13 | **Lots proches de la DLC** — Vue v_lots_proches_dlc (index sur la date limite) | 1.23 ms | – | <derived2> : parcours complet (859 l.) ; s : parcours complet (859 l.) ; l : index `PRIMARY` (1 l.) ; ar : index `PRIMARY` (1 l.) |
-| 14 | **Proposition d'emplacements** — Procédure stockée proposer_emplacements (rangement) | 2.86 ms | – | procédure stockée |
+| 1 | **Planning d'une journée** — Rendez-vous non annulés du jour, tous quais (planning.php) | 0.57 ms | 1.70 ms (×3.0) | t : index `ix_transporteur_raison` (18 l.) ; v : index `fk_vehicule_transporteur` (1 l.) ; r : index `fk_rdv_vehicule|ix_rdv_debut` (1 l.) |
+| 2 | **Contrôle de chevauchement** — Test exécuté par le déclencheur à chaque prise de rendez-vous | 0.10 ms | 1.24 ms (×12.9) | r : index `ix_rdv_quai_creneau` (234 l.) |
+| 3 | **Camions sur site** — Passages dont la dernière étape n'est pas le départ (flux.php) | 1.52 ms | – | p : parcours complet (3348 l.) ; v : index `PRIMARY` (1 l.) ; te : index `PRIMARY` (1 l.) |
+| 4 | **État des quais en temps réel** — Vue v_quai_temps_reel (statut calculé, camion à quai, prochain RDV) | 2.59 ms | – | q : parcours complet (16 l.) ; r : index `ix_rdv_quai_creneau` (1 l.) ; p : index `fk_passage_quai` (139 l.) ; v : index `PRIMARY` (1 l.) |
+| 5 | **Recherche plein texte (1re version)** — MATCH … AGAINST en sous-requête ; comparé à un LIKE '%…%' | 0.39 ms | 2.22 ms (×5.7) | article : index `ft_article_designation` (1 l.) ; ar : index `PRIMARY` (1 l.) ; c : index `PRIMARY` (1 l.) ; l : index `fk_lot_article` (1 l.) |
+| 6 | **Recherche plein texte (version retenue)** — Étape 1 : articles par MATCH … AGAINST (index FULLTEXT) | 0.07 ms | 0.08 ms (×1.2) | article : index `ft_article_designation` (1 l.) |
+| 7 | ↳ Étape 2 : stock des articles trouvés (stock.php) | 0.27 ms | – | ar : index `PRIMARY` (5 l.) ; c : index `PRIMARY` (1 l.) ; l : index `fk_lot_article` (1 l.) ; s : index `ix_stock_lot` (1 l.) |
+| 8 | **Historique d'un lot** — Mouvements d'un lot par ordre chronologique (lot.php) | 0.08 ms | 1.61 ms (×20.8) | mouvement_stock : index `ix_mvt_lot_date` (22 l.) |
+| 9 | **Mouvements des 7 derniers jours** — Historique filtré par date (mouvements.php) | 0.91 ms | 1.56 ms (×1.7) | mouvement_stock : index `ix_mvt_date` (2039 l.) |
+| 10 | **Temps moyens par transporteur (30 j)** — Agrégation de v_passage_durees (indicateurs.php) | 3.58 ms | – | arr : index `fk_pe_etape` (3348 l.) ; p : index `PRIMARY` (1 l.) ; v : index `PRIMARY` (1 l.) ; appel : index `PRIMARY` (1 l.) |
+| 11 | **Remplissage par zone** — Vue v_remplissage_zone (somme des palettes par zone) | 5.59 ms | – | z : parcours complet (4 l.) ; <derived4> : index `key0` (2 l.) ; <derived3> : index `key0` (2 l.) ; z : index `PRIMARY` (1 l.) |
+| 12 | **Taux d'écart par fournisseur** — Réceptions clôturées sur 30 jours (indicateurs.php) | 2.07 ms | – | f : index `PRIMARY` (30 l.) ; a : index `fk_avis_fournisseur` (1 l.) ; r : index `fk_reception_avis` (1 l.) ; e : index `fk_ecart_reception` (1 l.) |
+| 13 | **Lots proches de la DLC** — Vue v_lots_proches_dlc (index sur la date limite) | 1.59 ms | – | <derived2> : parcours complet (328 l.) ; ar : parcours complet (328 l.) ; l : index `fk_lot_article|ix_lot_dlc` (1 l.) ; s : index `ix_stock_lot` (1 l.) |
+| 14 | **Proposition d'emplacements** — Procédure stockée proposer_emplacements (rangement) | 32.16 ms | – | procédure stockée |
+| 15 | **Stock disponible d'un client** — Stock physique moins lignes réservées (portail client, commande) | 0.92 ms | – | ar : index `fk_article_client` (32 l.) ; l : index `fk_lot_article` (1 l.) ; lp : index `fk_lpr_lot` (1 l.) ; li : index `PRIMARY` (1 l.) |
+| 16 | **Contenu d'une expédition** — Unités chargées et poids par commande (documents de transport) | 0.08 ms | – | ue : index `fk_ue_expedition` (3 l.) ; c : index `PRIMARY` (1 l.) |
 
 ## Analyse : recherche plein texte
 
-La première version de la recherche de stock plaçait le `MATCH … AGAINST` dans une sous-requête `IN (…)`. Le plan d'exécution montre que l'optimiseur estime une seule ligne pour la recherche plein texte, puis parcourt toute la chaîne zone → allée → rack → emplacement → stock avant de filtrer : la requête était alors plus lente qu'un simple `LIKE '%…%'`. La version retenue résout d'abord les articles par l'index FULLTEXT, puis interroge le stock avec la liste d'identifiants obtenue : chaque étape utilise un index et le temps total est le plus faible des trois variantes. Avec un catalogue plus volumineux, l'écart en faveur de l'index FULLTEXT sur l'étape 1 augmenterait (le `LIKE '%…%'` impose toujours un parcours complet de la table).
+La première version de la recherche de stock plaçait le `MATCH … AGAINST` dans une sous-requête `IN (…)`. Selon les données, l'optimiseur peut estimer une seule ligne pour la recherche plein texte, puis parcourir toute la chaîne zone → allée → rack → emplacement → stock avant de filtrer : c'est ce qui a été observé sur un jeu de données antérieur, où cette requête prenait 19 ms, soit plus qu'un simple `LIKE '%…%'` (5 ms). La version retenue résout d'abord les articles par l'index FULLTEXT, puis interroge le stock avec la liste d'identifiants obtenue : son plan ne dépend plus de cette estimation. Sur le jeu actuel, les lignes 5, 6 et 7 ci-dessus montrent que les deux variantes sont équivalentes : le gain de la version retenue est la stabilité du plan, pas le temps moyen.
+
+## Analyse : requête la plus coûteuse
+
+La proposition d'emplacements est la requête la plus lente : elle appelle `fn_palettes_libres` et `fn_poids_libre` pour chaque emplacement candidat, soit plus d'un millier d'appels. Elle reste de l'ordre de quelques dizaines de millisecondes et n'est exécutée qu'à l'ouverture de l'écran de rangement ; le coût est accepté pour garder ces règles dans la base.
 
 ## Optimisations mises en place
 
