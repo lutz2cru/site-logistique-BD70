@@ -21,10 +21,10 @@ if (est_post() && isset($_POST['passage_id'])) {
         requete('INSERT INTO reception (passage_id, avis_id, receptionnaire_id, debut) VALUES (?, ?, ?, NOW())',
                 [$_POST['passage_id'], $avis, $u['id']]);
         rediriger('reception.php?id=' . db()->lastInsertId());
+    } catch (PDOException $e) {   // avant RuntimeException, dont elle hérite
+        flash('erreur', message_erreur($e));
     } catch (RuntimeException $e) {
         flash('erreur', $e->getMessage());
-    } catch (PDOException $e) {
-        flash('erreur', message_erreur($e));
     }
     rediriger('receptions.php');
 }

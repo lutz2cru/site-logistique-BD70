@@ -19,6 +19,10 @@ if (est_post()) {
             }
             requete('UPDATE quai SET statut = ? WHERE id = ?', [$statut, $id]);
             flash('succes', 'Statut du quai mis à jour.');
+            $aReplacer = (int) valeur("SELECT COUNT(*) FROM rendez_vous WHERE quai_id = ? AND statut = 'planifie' AND debut > NOW()", [$id]);
+            if ($statut === 'hors_service' && $aReplacer) {
+                flash('info', "$aReplacer rendez-vous à venir sont prévus sur ce quai : pensez à les déplacer.");
+            }
         } elseif (isset($_POST['supprimer']) && $gestion) {
             requete('DELETE FROM quai WHERE id = ?', [$id]);
             flash('succes', 'Quai supprimé.');

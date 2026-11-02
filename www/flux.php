@@ -44,12 +44,12 @@ if (est_post()) {
         $pdo->commit();
         $numero = valeur('SELECT numero FROM passage WHERE id = ?', [$pid]);
         flash('succes', "$numero : « {$parCode[$code]['libelle']} » enregistré à " . date('H:i') . '.');
+    } catch (PDOException $e) {   // avant RuntimeException, dont elle hérite
+        $pdo->rollBack();
+        flash('erreur', message_erreur($e));
     } catch (RuntimeException $e) {
         $pdo->rollBack();
         flash('erreur', $e->getMessage());
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        flash('erreur', message_erreur($e));
     }
     rediriger('flux.php');
 }

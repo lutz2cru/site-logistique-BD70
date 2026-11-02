@@ -2,7 +2,7 @@
 /**
  * Mesure des temps d'exécution des requêtes principales de l'application.
  *
- *   php sql/performances.php [--user=root] [--pass=]
+ *   php sql/performances.php [--host=localhost] [--user=root] [--pass=]
  *
  * Chaque requête est exécutée 20 fois (après une exécution de chauffe) ; on
  * retient la médiane. Le plan d'exécution (EXPLAIN) indique les index utilisés.
@@ -11,8 +11,8 @@
  */
 declare(strict_types=1);
 
-$opts = getopt('', ['user::', 'pass::']);
-$pdo = new PDO('mysql:host=localhost;dbname=entrepot;charset=utf8mb4', $opts['user'] ?? 'root', $opts['pass'] ?? '', [
+$opts = getopt('', ['host::', 'user::', 'pass::']);
+$pdo = new PDO('mysql:host=' . ($opts['host'] ?? 'localhost') . ';dbname=entrepot;charset=utf8mb4', $opts['user'] ?? 'root', $opts['pass'] ?? '', [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
 $pdo->exec('SET SESSION query_cache_type = OFF');
@@ -22,6 +22,7 @@ const REPETITIONS = 20;
 $quai = (int) $pdo->query("SELECT quai_id FROM rendez_vous GROUP BY quai_id ORDER BY COUNT(*) DESC LIMIT 1")->fetchColumn();
 $lot = (int) $pdo->query('SELECT lot_id FROM mouvement_stock GROUP BY lot_id ORDER BY COUNT(*) DESC LIMIT 1')->fetchColumn();
 $article = (int) $pdo->query('SELECT l.article_id FROM stock s JOIN lot l ON l.id = s.lot_id LIMIT 1')->fetchColumn();
+$client = (int) $pdo->query('SELECT client_id FROM article GROUP BY client_id ORDER BY COUNT(*) DESC LIMIT 1')->fetchColumn();
 
 /** [titre, description, requête, paramètres, requête sans index (facultatif)] */
 $requetes = [
@@ -60,9 +61,20 @@ $requetes = [
      "SELECT transporteur_id, COUNT(*), AVG(attente_min), AVG(immobilisation_min) FROM v_passage_durees
        WHERE depart IS NOT NULL AND arrivee >= CURRENT_DATE - INTERVAL 30 DAY GROUP BY transporteur_id", []],
     ['Remplissage par zone', 'Vue v_remplissage_zone (somme des palettes par zone)', 'SELECT * FROM v_remplissage_zone', []],
-    ['Taux d\'écart par fournisseur', 'Vue v_taux_ecart_fournisseur', 'SELECT * FROM v_taux_ecart_fournisseur', []],
+    ['Taux d\'écart par fournisseur', 'Réceptions clôturées sur 30 jours (indicateurs.php)',
+     "SELECT f.raison_sociale, COUNT(DISTINCT r.id), COUNT(DISTINCT e.reception_id) FROM reception r
+        JOIN avis_expedition a ON a.id = r.avis_id JOIN fournisseur f ON f.id = a.fournisseur_id LEFT JOIN ecart e ON e.reception_id = r.id
+       WHERE r.statut = 'cloturee' AND r.debut >= CURRENT_DATE - INTERVAL 30 DAY GROUP BY f.id", []],
     ['Lots proches de la DLC', 'Vue v_lots_proches_dlc (index sur la date limite)', 'SELECT * FROM v_lots_proches_dlc', []],
     ['Proposition d\'emplacements', 'Procédure stockée proposer_emplacements (rangement)', 'CALL proposer_emplacements(?, 1, 8)', [$article]],
+    ['Stock disponible d\'un client', 'Stock physique moins lignes réservées (portail client, commande)',
+     "SELECT ar.id, COALESCE((SELECT SUM(s.quantite) FROM stock s JOIN lot l ON l.id = s.lot_id WHERE l.article_id = ar.id), 0)
+           - COALESCE((SELECT SUM(lp.quantite_a_prelever) FROM ligne_prelevement lp JOIN liste_prelevement li ON li.id = lp.liste_id
+                         JOIN lot l ON l.id = lp.lot_id WHERE l.article_id = ar.id AND li.statut <> 'terminee' AND lp.quantite_prelevee IS NULL), 0) AS dispo
+        FROM article ar WHERE ar.client_id = ?", [$client]],
+    ['Contenu d\'une expédition', 'Unités chargées et poids par commande (documents de transport)',
+     "SELECT c.numero, COUNT(*), SUM(ue.poids_kg) FROM unite_expedition ue JOIN commande c ON c.id = ue.commande_id
+       WHERE ue.expedition_id = (SELECT MAX(id) FROM expedition) GROUP BY c.id", []],
 ];
 
 function mesurer(PDO $pdo, string $sql, array $params): float
@@ -87,6 +99,8 @@ function plan(PDO $pdo, string $sql, array $params): string
     $st->execute($params);
     $etapes = [];
     foreach ($st->fetchAll() as $l) {
+        if ($l['table'] === null) { continue; }   // ligne sans table (ex. SELECT EXISTS)
+        $l['rows'] = (int) $l['rows'];
         $etapes[] = $l['table'] . ' : ' . ($l['key'] ? 'index `' . $l['key'] . '`' : ($l['type'] === 'ALL' ? 'parcours complet' : $l['type'])) . ' (' . $l['rows'] . ' l.)';
     }
     return implode(' ; ', array_slice($etapes, 0, 4));
@@ -113,11 +127,9 @@ foreach ($requetes as $i => $r) {
     printf("%-40s %8.2f ms %s\n", $titre, $avec, $sans ? sprintf('(sans index : %.2f ms)', $sans) : '');
 }
 $md .= "\n## Analyse : recherche plein texte\n\n";
-$md .= "La première version de la recherche de stock plaçait le `MATCH … AGAINST` dans une sous-requête `IN (…)`. Le plan d'exécution montre que l'optimiseur estime "
-     . "une seule ligne pour la recherche plein texte, puis parcourt toute la chaîne zone → allée → rack → emplacement → stock avant de filtrer : la requête était "
-     . "alors plus lente qu'un simple `LIKE '%…%'`. La version retenue résout d'abord les articles par l'index FULLTEXT, puis interroge le stock avec la liste "
-     . "d'identifiants obtenue : chaque étape utilise un index et le temps total est le plus faible des trois variantes. Avec un catalogue plus volumineux, "
-     . "l'écart en faveur de l'index FULLTEXT sur l'étape 1 augmenterait (le `LIKE '%…%'` impose toujours un parcours complet de la table).\n";
+$md .= "La première version de la recherche de stock plaçait le `MATCH … AGAINST` dans une sous-requête `IN (…)`. Selon les données, l'optimiseur peut estimer une seule ligne pour la recherche plein texte, puis parcourir toute la chaîne zone → allée → rack → emplacement → stock avant de filtrer : c'est ce qui a été observé sur un jeu de données antérieur, où cette requête prenait 19 ms, soit plus qu'un simple `LIKE '%…%'` (5 ms). La version retenue résout d'abord les articles par l'index FULLTEXT, puis interroge le stock avec la liste d'identifiants obtenue : son plan ne dépend plus de cette estimation. Sur le jeu actuel, les lignes 5, 6 et 7 ci-dessus montrent que les deux variantes sont équivalentes : le gain de la version retenue est la stabilité du plan, pas le temps moyen.\n";
+$md .= "\n## Analyse : requête la plus coûteuse\n\n";
+$md .= "La proposition d'emplacements est la requête la plus lente : elle appelle `fn_palettes_libres` et `fn_poids_libre` pour chaque emplacement candidat, soit plus d'un millier d'appels. Elle reste de l'ordre de quelques dizaines de millisecondes et n'est exécutée qu'à l'ouverture de l'écran de rangement ; le coût est accepté pour garder ces règles dans la base.\n";
 $md .= "\n## Optimisations mises en place\n\n";
 $md .= "- **Index composite `ix_rdv_quai_creneau (quai_id, debut, fin)`** : utilisé par le contrôle de chevauchement exécuté dans le déclencheur à chaque insertion ou modification de rendez-vous, et par le planning.\n";
 $md .= "- **Index `ix_mvt_lot_date (lot_id, date_heure)`** : historique d'un lot déjà trié, sans tri supplémentaire (traçabilité).\n";

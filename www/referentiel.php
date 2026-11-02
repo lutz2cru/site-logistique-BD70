@@ -8,7 +8,7 @@ require __DIR__ . '/includes/layout.php';
 require __DIR__ . '/includes/referentiels.php';
 
 $refs = referentiels();
-$cle = $_GET['t'] ?? '';
+$cle = filtre('t');
 if (!isset($refs[$cle])) { rediriger('index.php'); }
 $ref = $refs[$cle];
 exiger_profil(...$ref['lecture']);

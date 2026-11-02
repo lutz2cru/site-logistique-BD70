@@ -5,6 +5,15 @@
 declare(strict_types=1);
 
 date_default_timezone_set('Europe/Paris');
+
+// aucune erreur technique (chemin, requête) n'est montrée à l'utilisateur : elle part dans le journal PHP
+ini_set('display_errors', '0');
+set_exception_handler(function (Throwable $e): void {
+    error_log((string) $e);
+    if (!headers_sent()) { http_response_code(500); }
+    echo '<p>Une erreur est survenue. Revenez à la <a href="index.php">page d\'accueil</a> et réessayez.</p>';
+});
+
 session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
 session_start();
 
@@ -72,6 +81,19 @@ function exiger_connexion(): array
         flash('info', 'Veuillez vous connecter.');
         rediriger('connexion.php');
     }
+    // relu à chaque page : un compte désactivé ou modifié par l'administrateur prend effet aussitôt
+    $compte = ligne('SELECT u.actif, u.transporteur_id, u.client_id, p.code, p.libelle
+                       FROM utilisateur u JOIN profil p ON p.id = u.profil_id WHERE u.id = ?', [$_SESSION['utilisateur']['id']]);
+    if (!$compte || !$compte['actif']) {
+        unset($_SESSION['utilisateur']);
+        flash('erreur', 'Votre compte a été désactivé.');
+        rediriger('connexion.php');
+    }
+    $_SESSION['utilisateur'] = array_merge($_SESSION['utilisateur'], [
+        'profil' => $compte['code'], 'profil_libelle' => $compte['libelle'],
+        'transporteur_id' => $compte['transporteur_id'] !== null ? (int) $compte['transporteur_id'] : null,
+        'client_id' => $compte['client_id'] !== null ? (int) $compte['client_id'] : null,
+    ]);
     return utilisateur();
 }
 
@@ -101,7 +123,8 @@ function champ_csrf(): string
 
 function verifier_csrf(): void
 {
-    if (!hash_equals(jeton_csrf(), $_POST['csrf'] ?? '')) {
+    $jeton = $_POST['csrf'] ?? '';
+    if (!is_string($jeton) || !hash_equals(jeton_csrf(), $jeton)) {
         http_response_code(400);
         exit('Jeton de sécurité invalide. Rechargez la page.');
     }
@@ -194,14 +217,14 @@ function liens_pagination(int $page, int $pages): string
     return $html . '</nav>';
 }
 
-/** Articles d'un client ayant du stock disponible (stock physique moins listes en cours), indexés par id. */
+/** Articles d'un client ayant du stock disponible (stock physique moins lignes réservées non prélevées), indexés par id. */
 function articles_disponibles(int $clientId): array
 {
     $articles = [];
     foreach (lignes("SELECT ar.id, ar.reference, ar.designation,
                             COALESCE((SELECT SUM(s.quantite) FROM stock s JOIN lot l ON l.id = s.lot_id WHERE l.article_id = ar.id), 0)
                           - COALESCE((SELECT SUM(lp.quantite_a_prelever) FROM ligne_prelevement lp JOIN liste_prelevement li ON li.id = lp.liste_id
-                                        JOIN lot l ON l.id = lp.lot_id WHERE l.article_id = ar.id AND li.statut <> 'terminee'), 0) AS dispo
+                                        JOIN lot l ON l.id = lp.lot_id WHERE l.article_id = ar.id AND li.statut <> 'terminee' AND lp.quantite_prelevee IS NULL), 0) AS dispo
                        FROM article ar WHERE ar.client_id = ? ORDER BY ar.reference", [$clientId]) as $a) {
         if ($a['dispo'] > 0) { $articles[$a['id']] = $a; }
     }
@@ -209,4 +232,15 @@ function articles_disponibles(int $clientId): array
 }
 
 /** Valeur d'un paramètre GET de filtre (chaîne vide si absent). */
-function filtre(string $nom): string { return trim((string) ($_GET[$nom] ?? '')); }
+function filtre(string $nom): string
+{
+    $v = $_GET[$nom] ?? '';
+    return is_string($v) ? trim($v) : '';
+}
+
+/** Date AAAA-MM-JJ d'un filtre GET ; la valeur par défaut si elle est absente ou invalide. */
+function filtre_date(string $nom, string $defaut): string
+{
+    $d = DateTime::createFromFormat('Y-m-d', filtre($nom));
+    return $d && $d->format('Y-m-d') === filtre($nom) ? filtre($nom) : $defaut;
+}

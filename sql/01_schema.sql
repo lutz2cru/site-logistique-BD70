@@ -1,7 +1,7 @@
 -- =====================================================================
 --  Système de gestion d'un entrepôt logistique — BD70
---  Script 1/3 : modèle relationnel (tables, clés, contraintes, index)
---  SGBD cible : MariaDB 10.4+ / MySQL 8+
+--  Script 1/2 : modèle relationnel (tables, clés, contraintes, index)
+--  SGBD cible : MariaDB 10.4+ (CREATE SEQUENCE n'existe pas sous MySQL)
 -- =====================================================================
 --  Conventions :
 --   - chaque table possède une clé primaire artificielle `id` (sauf les
@@ -9,7 +9,8 @@
 --   - les identifiants « métier » (SIRET, immatriculation, numéro de RDV…)
 --     sont déclarés UNIQUE : ce sont eux qui sont affichés à l'utilisateur ;
 --   - les numéros métier (RDV-000001, REC-000001…) sont générés par des
---     séquences dans les déclencheurs (voir 02_automatisation.sql).
+--     séquences dans les déclencheurs (voir 02_automatisation.sql) ;
+--     leur valeur par défaut '' signale au déclencheur qu'il doit numéroter.
 -- =====================================================================
 
 DROP DATABASE IF EXISTS entrepot;
@@ -189,7 +190,7 @@ CREATE TABLE quai_type_vehicule (
 
 CREATE TABLE rendez_vous (
     id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero           VARCHAR(12)       NOT NULL UNIQUE,
+    numero           VARCHAR(12)       NOT NULL DEFAULT '' UNIQUE,
     quai_id          SMALLINT UNSIGNED NOT NULL,
     vehicule_id      INT UNSIGNED      NOT NULL,
     debut            DATETIME          NOT NULL,
@@ -219,7 +220,7 @@ CREATE TABLE type_etape (
 
 CREATE TABLE passage (
     id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero         VARCHAR(12)       NOT NULL UNIQUE,
+    numero         VARCHAR(12)       NOT NULL DEFAULT '' UNIQUE,
     rendez_vous_id INT UNSIGNED      NULL UNIQUE,     -- NULL = arrivée sans rendez-vous
     vehicule_id    INT UNSIGNED      NOT NULL,
     chauffeur_id   INT UNSIGNED      NOT NULL,
@@ -341,7 +342,7 @@ CREATE TABLE article (
 
 CREATE TABLE lot (
     id                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    code_lot               VARCHAR(12)  NOT NULL UNIQUE,
+    code_lot               VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     article_id             INT UNSIGNED NOT NULL,
     numero_lot_fournisseur VARCHAR(30)  NULL,
     date_fabrication       DATE         NULL,
@@ -352,7 +353,8 @@ CREATE TABLE lot (
 ) ENGINE=InnoDB;
 
 -- Association N:N « Stocker » : quantité d'un lot sur un emplacement.
--- Table maintenue EXCLUSIVEMENT par le déclencheur de mouvement_stock.
+-- Table maintenue EXCLUSIVEMENT par le déclencheur de mouvement_stock
+-- (le compte de l'application n'a que le droit de lecture, voir installer.php).
 CREATE TABLE stock (
     emplacement_id INT UNSIGNED NOT NULL,
     lot_id         INT UNSIGNED NOT NULL,
@@ -366,7 +368,7 @@ CREATE TABLE stock (
 -- Historique de tous les mouvements de stock (jamais modifié ni supprimé)
 CREATE TABLE mouvement_stock (
     id                         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero                     VARCHAR(12)  NOT NULL UNIQUE,
+    numero                     VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     type                       ENUM('entree','transfert','sortie','ajustement') NOT NULL,
     lot_id                     INT UNSIGNED NOT NULL,
     quantite                   INT UNSIGNED NOT NULL,
@@ -410,7 +412,7 @@ CREATE TABLE fournisseur (
 
 CREATE TABLE avis_expedition (
     id               INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero           VARCHAR(12)  NOT NULL UNIQUE,
+    numero           VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     fournisseur_id   INT UNSIGNED NOT NULL,
     date_emission    DATE         NOT NULL,
     livraison_prevue DATE         NOT NULL,
@@ -433,7 +435,7 @@ CREATE TABLE ligne_avis (
 
 CREATE TABLE reception (
     id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero            VARCHAR(12)  NOT NULL UNIQUE,
+    numero            VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     passage_id        INT UNSIGNED NOT NULL,
     avis_id           INT UNSIGNED NULL,               -- NULL = livraison non annoncée
     receptionnaire_id INT UNSIGNED NOT NULL,
@@ -461,7 +463,7 @@ CREATE TABLE reception_lot (
 
 CREATE TABLE reserve (
     id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero        VARCHAR(12)  NOT NULL UNIQUE,
+    numero        VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     date_emission DATETIME     NOT NULL,
     motif         VARCHAR(255) NOT NULL,
     transmise     BOOLEAN      NOT NULL DEFAULT FALSE  -- transmise au transporteur
@@ -469,7 +471,7 @@ CREATE TABLE reserve (
 
 CREATE TABLE ecart (
     id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero       VARCHAR(12)  NOT NULL UNIQUE,
+    numero       VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     reception_id INT UNSIGNED NOT NULL,
     article_id   INT UNSIGNED NOT NULL,
     type         ENUM('manquant','excedent','endommage') NOT NULL,
@@ -487,7 +489,7 @@ CREATE TABLE ecart (
 -- =====================================================================
 CREATE TABLE commande (
     id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero               VARCHAR(12)  NOT NULL UNIQUE,
+    numero               VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     client_id            INT UNSIGNED NOT NULL,
     date_commande        DATE         NOT NULL,
     expedition_souhaitee DATE         NOT NULL,
@@ -514,7 +516,7 @@ CREATE TABLE ligne_commande (
 
 CREATE TABLE liste_prelevement (
     id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero         VARCHAR(12)  NOT NULL UNIQUE,
+    numero         VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     commande_id    INT UNSIGNED NOT NULL,
     preparateur_id INT UNSIGNED NULL,
     regle_sortie   ENUM('FIFO','FEFO') NOT NULL,
@@ -544,7 +546,7 @@ CREATE TABLE ligne_prelevement (
 
 CREATE TABLE expedition (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero          VARCHAR(12)  NOT NULL UNIQUE,
+    numero          VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     passage_id      INT UNSIGNED NOT NULL,
     date_chargement DATETIME     NULL,
     statut          ENUM('en_chargement','chargee','partie') NOT NULL DEFAULT 'en_chargement',
@@ -576,7 +578,7 @@ CREATE TABLE contenu_unite (
 
 CREATE TABLE document_transport (
     id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero        VARCHAR(12)  NOT NULL UNIQUE,
+    numero        VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     expedition_id INT UNSIGNED NOT NULL,
     type          ENUM('BL','CMR') NOT NULL,          -- bon de livraison / lettre de voiture
     date_emission DATETIME     NOT NULL,

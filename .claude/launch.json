@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "site-entrepot",
+      "runtimeExecutable": "C:\\xampp\\php\\php.exe",
+      "runtimeArgs": ["-S", "localhost:8080", "-t", "www"],
+      "port": 8080
+    }
+  ]
+}

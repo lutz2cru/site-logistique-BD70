@@ -13,11 +13,15 @@ $where = ['1 = 1'];
 $params = [];
 if ($f['q'] !== '') {
     // Index FULLTEXT sur la désignation + préfixe de référence. Les articles sont résolus
-    // d'abord : en sous-requête, l'optimiseur sous-estime le MATCH et parcourt tous les
-    // emplacements (19 ms contre 4 ms, voir docs/rapport_performances.md).
-    $mots = implode(' ', array_map(fn($m) => '+' . preg_replace('/[^\p{L}\p{N}]/u', '', $m) . '*', preg_split('/\s+/', $f['q'])));
-    $ids = requete('SELECT id FROM article WHERE MATCH(designation) AGAINST (? IN BOOLEAN MODE) OR reference LIKE ?', [$mots, $f['q'] . '%'])
-        ->fetchAll(PDO::FETCH_COLUMN);
+    // d'abord : en sous-requête, l'optimiseur peut sous-estimer le MATCH et parcourir tous les
+    // emplacements (voir docs/rapport_performances.md). Seuls les lettres et chiffres sont
+    // transmis : un mot vide ou un opérateur isolé serait une erreur de syntaxe pour MATCH.
+    preg_match_all('/[\p{L}\p{N}]+/u', $f['q'], $trouves);
+    $mots = implode(' ', array_map(fn($m) => "+$m*", $trouves[0]));
+    $ids = $mots !== ''
+        ? requete('SELECT id FROM article WHERE MATCH(designation) AGAINST (? IN BOOLEAN MODE) OR reference LIKE ?', [$mots, $f['q'] . '%'])
+        : requete('SELECT id FROM article WHERE reference LIKE ?', [$f['q'] . '%']);
+    $ids = $ids->fetchAll(PDO::FETCH_COLUMN);
     $where[] = $ids ? 'd.article_id IN (' . implode(',', array_map('intval', $ids)) . ')' : '0 = 1';
 }
 if ($f['client'] !== '') { $where[] = 'd.client_id = ?'; $params[] = $f['client']; }
