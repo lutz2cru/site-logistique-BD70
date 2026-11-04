@@ -33,7 +33,7 @@ L'interface n'était exigée que pour les domaines marqués « requis » ; les a
 
 Le visiteur (non connecté) peut seulement s'inscrire. Les cinq acteurs ci-dessus héritent de l'acteur générique « Utilisateur », qui se connecte.
 
-Les clients propriétaires, fournisseurs et chauffeurs sont des données gérées par le système, pas des acteurs : ils n'ont pas de compte. Le système se limite au périmètre du sujet ; il n'y a ni portail client, ni borne en libre-service, ni journal d'audit.
+Les clients propriétaires, fournisseurs et chauffeurs sont des données gérées par le système, pas des acteurs : ils n'ont pas de compte. Le système se limite strictement au périmètre du sujet.
 
 ## 4. Exigences fonctionnelles
 
