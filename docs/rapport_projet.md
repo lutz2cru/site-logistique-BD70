@@ -1,8 +1,8 @@
 # Système de gestion d'un entrepôt logistique
 
-**Rapport de projet — UV BD70, Conception et administration des bases de données**
+**Rapport de projet — UE BD70, semestre A26**
 
-Auteurs : RAZEK, TELLITEL, LUTZ *(prénoms à compléter)*
+Auteurs : Jad ABDUL RAZEK, Matthias LUTZ, Abdelmalik TELITEL
 Enseignant : Alexandre Lombard — UTBM
 
 ## Table des matières
@@ -16,7 +16,7 @@ Enseignant : Alexandre Lombard — UTBM
 7. Fonctionnalités réalisées
 8. Conclusion
 
-Annexes : `cahier_des_charges.md`, `fiches_cas_utilisation.md`, `schema_relationnel.md`, `rapport_performances.md`.
+Documents joints, chacun dans un PDF distinct : cahier des charges, fiches des cas d'utilisation, schéma relationnel détaillé, rapport d'analyse des performances.
 
 ---
 
@@ -26,11 +26,11 @@ Ce projet consiste à concevoir et développer un système de base de données r
 
 Nous avons réalisé une application web en PHP 8 avec PDO, sur une base MariaDB 10.4. La logique métier critique est placée dans la base : les règles s'appliquent ainsi quel que soit le chemin d'écriture, y compris lors de la génération des données factices.
 
-La démarche a suivi les étapes vues en cours : analyse par les cas d'utilisation, modèle conceptuel, modèle relationnel, implémentation, puis mesure des performances. Le détail des besoins figure dans le cahier des charges en annexe.
+La démarche a suivi les étapes vues en cours : analyse par les cas d'utilisation, modèle conceptuel, modèle relationnel, implémentation, puis mesure des performances. Le détail des besoins figure dans le cahier des charges, fourni à part.
 
 ## 2. Analyse : cas d'utilisation
 
-Le diagramme `uml/use_case_entrepot.drawio` décrit le système selon les cinq acteurs du sujet : administrateur, responsable d'exploitation, agent d'accueil, magasinier / préparateur et transporteur. Ils héritent tous de l'acteur générique « Utilisateur », qui se connecte ; le « Visiteur » peut seulement s'inscrire. Le diagramme compte 47 cas d'utilisation, regroupés selon les étapes du sujet, avec leurs relations `«include»` et `«extend»` (les extensions portent leur condition).
+Le diagramme `uml/use_case_entrepot.svg` décrit le système selon les cinq acteurs du sujet : administrateur, responsable d'exploitation, agent d'accueil, magasinier / préparateur et transporteur. Ils héritent tous de l'acteur générique « Utilisateur », qui se connecte ; le « Visiteur » peut seulement s'inscrire. Le diagramme compte 47 cas d'utilisation, regroupés selon les étapes du sujet, avec leurs relations `«include»` et `«extend»` (les extensions portent leur condition).
 
 *[Insérer ici le diagramme de cas d'utilisation]*
 
@@ -65,7 +65,7 @@ La table de correspondance complète figure à la fin de `fiches_cas_utilisation
 
 ### 3.1 Modèle conceptuel
 
-Le diagramme entité-association (`uml/diagramme_entite_association.drawio`) compte 33 entités et 46 associations :
+Le diagramme entité-association (`uml/diagramme_entite_association.svg`) compte 33 entités et 46 associations :
 - 33 associations 1:N ;
 - 1 association 0..1 / 0..1 (**Honorer**) ;
 - 12 associations N:N, dont 2 ternaires.
@@ -174,7 +174,7 @@ Nous avons à l'inverse gardé en binaire plusieurs associations où une troisi�
 
 ### 3.2 Modèle logique
 
-Le modèle relationnel compte 45 tables : les 33 entités et les associations N:N ou ternaires devenues tables de jointure. Le schéma `uml/schema_relationnel.drawio` le représente : clés primaires soulignées, clés étrangères préfixées par `#` et reliées par une flèche à la table référencée, valeurs uniques en italique. Le détail table par table figure dans `schema_relationnel.md`.
+Le modèle relationnel compte 45 tables : les 33 entités et les associations N:N ou ternaires devenues tables de jointure. Le schéma `uml/schema_relationnel.svg` le représente : clés primaires soulignées, clés étrangères préfixées par `#` et reliées par une flèche à la table référencée, valeurs uniques en italique. Le détail table par table figure dans `schema_relationnel.md`.
 
 *[Insérer ici le schéma relationnel]*
 
@@ -313,4 +313,4 @@ Le choix le plus structurant a été de placer les règles métier dans la base 
 
 Plusieurs améliorations resteraient possibles : la réaffectation automatique des rendez-vous d'un quai hors service, le blocage des comptes après plusieurs échecs de connexion, et un parcours de préparation sur terminal mobile.
 
-*[À compléter par le groupe : répartition du travail et bilan personnel.]*
+**Bilan personnel.** Ce projet nous a permis de mettre en application l'ensemble du cours sur les bases de données, des requêtes les plus simples jusqu'à l'optimisation. Nous sommes partis de l'analyse, avec les cas d'utilisation puis le modèle entité-association, avant de la traduire en un schéma relationnel en troisième forme normale. Nous avons ensuite écrit des requêtes de plus en plus riches : sélections, jointures et agrégations pour les recherches et les indicateurs, puis vues, fonctions, procédures et déclencheurs pour automatiser les règles métier et l'historisation. Enfin, la mesure des temps d'exécution et la lecture des plans d'exécution (`EXPLAIN`) nous ont montré concrètement ce qu'apporte un index bien choisi. Les remarques reçues sur le modèle conceptuel nous ont aussi appris à vérifier la cohérence entre les modèles, du diagramme de cas d'utilisation jusqu'à la base.

@@ -1,6 +1,6 @@
 # Fiches textuelles des cas d'utilisation phares
 
-Spécification textuelle de quatre cas d'utilisation du diagramme `uml/use_case_entrepot.drawio`,
+Spécification textuelle de quatre cas d'utilisation du diagramme `uml/use_case_entrepot.svg`,
 selon le modèle vu en cours (identification, séquencement, préconditions, enchaînement, postconditions).
 Les noms des cas, les `«include»` et les `«extend»` cités sont exactement ceux du diagramme.
 Une table de correspondance entre les cas d'utilisation et le diagramme entité-association termine le document.
@@ -24,7 +24,7 @@ Une table de correspondance entre les cas d'utilisation et le diagramme entité-
 | Objectif | Réserver un créneau sur un quai compatible avec le véhicule et le sens du flux, sans chevauchement |
 | Acteurs | Transporteur (principal, pour ses propres véhicules) ; Agent d'accueil (principal, pour tout transporteur) |
 | Date | 04/11/2026 |
-| Responsables | RAZEK, TELLITEL, LUTZ |
+| Responsables | Jad ABDUL RAZEK, Matthias LUTZ, Abdelmalik TELITEL |
 | Version | 2.0 |
 
 **Séquencement** : le cas commence quand l'acteur choisit « Nouveau rendez-vous ». Il inclut « Vérifier le créneau et la compatibilité véhicule / quai » (`«include»`).
@@ -60,7 +60,7 @@ Une table de correspondance entre les cas d'utilisation et le diagramme entité-
 | Objectif | Accueillir un camion qui se présente sans rendez-vous et lui trouver un quai compatible et libre |
 | Acteurs | Agent d'accueil |
 | Date | 04/11/2026 |
-| Responsables | RAZEK, TELLITEL, LUTZ |
+| Responsables | Jad ABDUL RAZEK, Matthias LUTZ, Abdelmalik TELITEL |
 | Version | 2.0 |
 
 **Séquencement** : le cas commence quand un camion se présente au poste de garde sans rendez-vous. Il étend « Enregistrer l'arrivée au poste de garde » (`«extend»`) sous la condition [aucun rendez-vous]. Il inclut « Affecter un quai libre et compatible » (`«include»`).
@@ -98,7 +98,7 @@ Une table de correspondance entre les cas d'utilisation et le diagramme entité-
 | Objectif | Contrôler la marchandise déchargée par rapport à l'avis d'expédition et tracer chaque lot reçu |
 | Acteurs | Magasinier / Préparateur |
 | Date | 04/11/2026 |
-| Responsables | RAZEK, TELLITEL, LUTZ |
+| Responsables | Jad ABDUL RAZEK, Matthias LUTZ, Abdelmalik TELITEL |
 | Version | 2.0 |
 
 **Séquencement** : le cas commence quand un camion de réception est à quai. Il inclut « Détecter les écarts avec l'avis » (`«include»`). Il est étendu par « Émettre une réserve auprès du transporteur » (`«extend»`) sous la condition [écart constaté].
@@ -137,7 +137,7 @@ Une table de correspondance entre les cas d'utilisation et le diagramme entité-
 | Objectif | Exécuter une liste de prélèvement générée par le responsable d'exploitation, ligne par ligne, en tenant le stock à jour |
 | Acteurs | Magasinier / Préparateur |
 | Date | 04/11/2026 |
-| Responsables | RAZEK, TELLITEL, LUTZ |
+| Responsables | Jad ABDUL RAZEK, Matthias LUTZ, Abdelmalik TELITEL |
 | Version | 2.0 |
 
 **Séquencement** : le cas commence quand le préparateur ouvre une liste qui lui est affectée.
@@ -168,7 +168,7 @@ Une table de correspondance entre les cas d'utilisation et le diagramme entité-
 
 ## Correspondance entre cas d'utilisation et diagramme entité-association
 
-Chaque cas d'utilisation s'appuie sur des entités et des associations du diagramme `uml/diagramme_entite_association.drawio`.
+Chaque cas d'utilisation s'appuie sur des entités et des associations du diagramme `uml/diagramme_entite_association.svg`.
 Réciproquement, chaque entité est créée ou mise à jour par au moins un cas d'utilisation.
 
 | Cas d'utilisation | Entités | Associations |

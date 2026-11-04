@@ -1,6 +1,6 @@
 # Cahier des charges — Système de gestion d'un entrepôt logistique
 
-UV BD70 · RAZEK, TELLITEL, LUTZ
+UE BD70 · semestre A26 · Jad ABDUL RAZEK, Matthias LUTZ, Abdelmalik TELITEL
 
 ## 1. Contexte et objectif
 

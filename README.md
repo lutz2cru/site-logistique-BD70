@@ -55,7 +55,8 @@ www/                       site web (une page PHP par écran, gabarit commun dan
 docs/                      rapport de projet, cahier des charges, fiches de cas d'utilisation,
                            schéma relationnel, rapport de performances
 uml/                       diagramme de cas d'utilisation, diagramme entité-association,
-                           schéma relationnel (fichiers draw.io)
+                           schéma relationnel (fichiers SVG)
+sujet/                     énoncé du projet (A26) et grille d'évaluation SI70
 ```
 
 ## Fonctionnalités web
