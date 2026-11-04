@@ -57,7 +57,11 @@ $preparateurs = lignes("SELECT CONCAT(u.prenom, ' ', u.nom) AS nom, COUNT(*) AS 
                           JOIN utilisateur u ON u.id = x.preparateur_id GROUP BY u.id ORDER BY lignes_heure DESC", $periode);
 $dlc = lignes('SELECT * FROM v_lots_proches_dlc ORDER BY date_limite_conso LIMIT 15');
 
-$json = fn($v) => json_encode($v, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
+/** Données PHP converties en JSON pour les graphiques (accents conservés, nombres en nombres). */
+function en_json($v): string
+{
+    return json_encode($v, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
+}
 entete('Indicateurs de pilotage');
 ?>
 <div class="entete-page">
@@ -141,7 +145,7 @@ entete('Indicateurs de pilotage');
 <script src="assets/chart.umd.min.js"></script>
 <script>
 const bleu = '#1f5fbf', violet = '#6941c6', vert = '#1a7f4b', orange = '#e69b23', rouge = '#b42318';
-const jours = <?= $json($parJour) ?>, quais = <?= $json($parQuai) ?>, zones = <?= $json($zones) ?>, transp = <?= $json($parTransporteur) ?>;
+const jours = <?= en_json($parJour) ?>, quais = <?= en_json($parQuai) ?>, zones = <?= en_json($zones) ?>, transp = <?= en_json($parTransporteur) ?>;
 const opts = { responsive: true, plugins: { legend: { position: 'bottom' } } };
 new Chart(document.getElementById('g-jours'), { type: 'bar', options: { ...opts, scales: { x: { stacked: true }, y: { stacked: true } } }, data: {
     labels: jours.map(j => new Date(j.jour).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })),

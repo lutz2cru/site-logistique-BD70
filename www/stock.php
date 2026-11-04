@@ -14,10 +14,12 @@ $params = [];
 if ($f['q'] !== '') {
     // Index FULLTEXT sur la désignation + préfixe de référence. Les articles sont résolus
     // d'abord : en sous-requête, l'optimiseur peut sous-estimer le MATCH et parcourir tous les
-    // emplacements (voir docs/rapport_performances.md). Seuls les lettres et chiffres sont
+    // emplacements (voir le rapport d'analyse des performances). Seuls les lettres et chiffres sont
     // transmis : un mot vide ou un opérateur isolé serait une erreur de syntaxe pour MATCH.
     preg_match_all('/[\p{L}\p{N}]+/u', $f['q'], $trouves);
-    $mots = implode(' ', array_map(fn($m) => "+$m*", $trouves[0]));
+    $mots = [];
+    foreach ($trouves[0] as $m) { $mots[] = "+$m*"; }      // chaque mot obligatoire, en début de mot
+    $mots = implode(' ', $mots);
     $ids = $mots !== ''
         ? requete('SELECT id FROM article WHERE MATCH(designation) AGAINST (? IN BOOLEAN MODE) OR reference LIKE ?', [$mots, $f['q'] . '%'])
         : requete('SELECT id FROM article WHERE reference LIKE ?', [$f['q'] . '%']);

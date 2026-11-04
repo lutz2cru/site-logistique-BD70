@@ -136,10 +136,6 @@ input[type=checkbox] { width: 16px; height: 16px; }
 .planning .maintenant { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--rouge); z-index: 3; }
 .planning .hs .piste { background: repeating-linear-gradient(45deg, #f3f3f3 0 8px, #e8e8e8 8px 16px); }
 
-/* ---------- étapes d'un passage ---------- */
-.etapes { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.etapes li { padding: 4px 10px; border-radius: 99px; background: var(--gris-f); color: var(--discret); font-size: 12px; }
-.etapes li.fait { background: var(--vert-f); color: var(--vert); }
 .chronologie { list-style: none; padding: 0; margin: 0; border-left: 2px solid var(--bord); }
 .chronologie li { position: relative; padding: 4px 0 12px 18px; }
 .chronologie li::before { content: ""; position: absolute; left: -7px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--vert); border: 2px solid #fff; }

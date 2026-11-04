@@ -9,8 +9,6 @@
  * Pour quelques requêtes, on compare avec une version qui ignore l'index afin
  * de mesurer son apport. Le résultat est écrit dans docs/rapport_performances.md.
  */
-declare(strict_types=1);
-
 $opts = getopt('', ['host::', 'user::', 'pass::']);
 $pdo = new PDO('mysql:host=' . ($opts['host'] ?? 'localhost') . ';dbname=entrepot;charset=utf8mb4', $opts['user'] ?? 'root', $opts['pass'] ?? '', [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,

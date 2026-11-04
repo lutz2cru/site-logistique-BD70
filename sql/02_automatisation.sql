@@ -202,6 +202,57 @@ BEGIN
 END$$
 
 -- =====================================================================
+--  DÉCLENCHEURS : capacité du camion sortant
+-- =====================================================================
+
+-- Refuse de charger une unité d'expédition si le camion dépasse alors
+-- son nombre de palettes ou son poids maximal (véhicule du passage).
+CREATE PROCEDURE verifier_chargement(
+    IN p_unite_id INT UNSIGNED, IN p_expedition_id INT UNSIGNED,
+    IN p_type VARCHAR(10), IN p_poids DECIMAL(8,2))
+BEGIN
+    DECLARE v_palettes_max SMALLINT UNSIGNED;
+    DECLARE v_poids_max    INT UNSIGNED;
+    DECLARE v_palettes     INT UNSIGNED;
+    DECLARE v_poids        DECIMAL(10,2);
+
+    SELECT v.palettes_max, v.poids_max_kg INTO v_palettes_max, v_poids_max
+      FROM expedition e
+      JOIN passage p  ON p.id = e.passage_id
+      JOIN vehicule v ON v.id = p.vehicule_id
+     WHERE e.id = p_expedition_id;
+
+    -- unités déjà chargées dans ce camion, sans compter celle qu'on (re)charge
+    SELECT COALESCE(SUM(type = 'palette'), 0), COALESCE(SUM(poids_kg), 0)
+      INTO v_palettes, v_poids
+      FROM unite_expedition
+     WHERE expedition_id = p_expedition_id AND id <> COALESCE(p_unite_id, 0);
+
+    IF v_palettes + (p_type = 'palette') > v_palettes_max THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Capacité du camion dépassée : nombre maximal de palettes atteint.';
+    END IF;
+    IF v_poids + p_poids > v_poids_max THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Capacité du camion dépassée : poids maximal atteint.';
+    END IF;
+END$$
+
+CREATE TRIGGER tr_unite_expedition_bi BEFORE INSERT ON unite_expedition FOR EACH ROW
+BEGIN
+    IF NEW.expedition_id IS NOT NULL THEN
+        CALL verifier_chargement(NULL, NEW.expedition_id, NEW.type, NEW.poids_kg);
+    END IF;
+END$$
+
+CREATE TRIGGER tr_unite_expedition_bu BEFORE UPDATE ON unite_expedition FOR EACH ROW
+BEGIN
+    IF NEW.expedition_id IS NOT NULL
+       AND (OLD.expedition_id IS NULL OR NEW.expedition_id <> OLD.expedition_id
+            OR NEW.poids_kg <> OLD.poids_kg OR NEW.type <> OLD.type) THEN
+        CALL verifier_chargement(NEW.id, NEW.expedition_id, NEW.type, NEW.poids_kg);
+    END IF;
+END$$
+
+-- =====================================================================
 --  DÉCLENCHEURS : suivi des flux de camions
 -- =====================================================================
 

@@ -90,7 +90,7 @@ if (est_post()) {
                 try {
                     // le déclencheur vérifie chevauchement et compatibilité véhicule / quai
                     if ($rdv) {
-                        requete('UPDATE rendez_vous SET quai_id = ?, vehicule_id = ?, debut = ?, fin = ?, sens = ?, commentaire = ? WHERE id = ?', [...$donnees, $id]);
+                        requete('UPDATE rendez_vous SET quai_id = ?, vehicule_id = ?, debut = ?, fin = ?, sens = ?, commentaire = ? WHERE id = ?', array_merge($donnees, [$id]));
                         flash('succes', "Rendez-vous {$rdv['numero']} modifié.");
                     } else {
                         requete('INSERT INTO rendez_vous (quai_id, vehicule_id, debut, fin, sens, commentaire) VALUES (?, ?, ?, ?, ?, ?)', $donnees);
