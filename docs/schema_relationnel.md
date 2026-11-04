@@ -1,6 +1,6 @@
 # Modèle logique — schéma relationnel
 
-Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>clé primaire</u>, #clé étrangère (→ table référencée), *unique*.
+Déduit du diagramme entité-association, généré depuis la base `entrepot` (45 tables). Notation : <u>clé primaire</u>, #clé étrangère (→ table référencée), *unique*.
 
 - **allee** (<u>id</u>, #zone_id, *code*)
   - références : `zone_id` → zone
@@ -13,9 +13,11 @@ Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>c
 - **chauffeur_habilitation** (<u>#chauffeur_id</u>, <u>#habilitation_id</u>, date_obtention, date_expiration)
   - références : `chauffeur_id` → chauffeur, `habilitation_id` → habilitation
 - **client** (<u>id</u>, *siret*, raison_sociale, adresse, code_postal, ville, telephone, email)
-- **commande** (<u>id</u>, *numero*, #client_id, date_commande, expedition_souhaitee, adresse_livraison, code_postal, ville, statut, canal)
+- **commande** (<u>id</u>, *numero*, #client_id, date_commande, expedition_souhaitee, adresse_livraison, code_postal, ville, statut)
   - références : `client_id` → client
 - **condition_stockage** (<u>id</u>, *libelle*, temperature_min, temperature_max)
+- **constat_ecart** (<u>#reception_id</u>, <u>#article_id</u>, <u>#type_ecart_id</u>, quantite, description)
+  - références : `article_id` → article, `reception_id` → reception, `type_ecart_id` → type_ecart
 - **contact** (<u>id</u>, #transporteur_id, nom, prenom, fonction, telephone, *email*)
   - références : `transporteur_id` → transporteur
 - **contenu_unite** (<u>#unite_id</u>, <u>#lot_id</u>, quantite)
@@ -24,8 +26,6 @@ Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>c
   - références : `transporteur_id` → transporteur
 - **document_transport** (<u>id</u>, *numero*, #expedition_id, type, date_emission)
   - références : `expedition_id` → expedition
-- **ecart** (<u>id</u>, *numero*, #reception_id, #article_id, type, quantite, description, #reserve_id)
-  - références : `article_id` → article, `reception_id` → reception, `reserve_id` → reserve
 - **emplacement** (<u>id</u>, #rack_id, *code*, niveau, capacite_palettes, poids_max_kg, bloque)
   - références : `rack_id` → rack
 - **equipement** (<u>id</u>, *libelle*)
@@ -33,7 +33,6 @@ Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>c
   - références : `passage_id` → passage
 - **fournisseur** (<u>id</u>, *siret*, raison_sociale, adresse, code_postal, ville, telephone, email)
 - **habilitation** (<u>id</u>, *code*, libelle)
-- **journal_audit** (<u>id</u>, table_concernee, enregistrement_id, action, utilisateur_id, date_heure, details)
 - **ligne_avis** (<u>#avis_id</u>, <u>#article_id</u>, quantite_attendue)
   - références : `article_id` → article, `avis_id` → avis_expedition
 - **ligne_commande** (<u>#commande_id</u>, <u>#article_id</u>, quantite)
@@ -46,7 +45,7 @@ Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>c
   - références : `article_id` → article
 - **mouvement_stock** (<u>id</u>, *numero*, type, #lot_id, quantite, #emplacement_source_id, #emplacement_destination_id, #utilisateur_id, date_heure, motif)
   - références : `emplacement_destination_id` → emplacement, `lot_id` → lot, `emplacement_source_id` → emplacement, `utilisateur_id` → utilisateur
-- **passage** (<u>id</u>, *numero*, *#rendez_vous_id*, #vehicule_id, #chauffeur_id, #quai_id, sens, #etape_courante_id, observations, borne)
+- **passage** (<u>id</u>, *numero*, *#rendez_vous_id*, #vehicule_id, #chauffeur_id, #quai_id, sens, #etape_courante_id, observations)
   - références : `chauffeur_id` → chauffeur, `etape_courante_id` → type_etape, `quai_id` → quai, `rendez_vous_id` → rendez_vous, `vehicule_id` → vehicule
 - **passage_etape** (<u>#passage_id</u>, <u>#type_etape_id</u>, date_heure, commentaire)
   - références : `type_etape_id` → type_etape, `passage_id` → passage
@@ -58,33 +57,33 @@ Généré automatiquement depuis la base `entrepot` (46 tables). Notation : <u>c
   - références : `quai_id` → quai, `type_vehicule_id` → type_vehicule
 - **rack** (<u>id</u>, #allee_id, *code*, nb_niveaux)
   - références : `allee_id` → allee
-- **reception** (<u>id</u>, *numero*, #passage_id, #avis_id, #receptionnaire_id, debut, fin, statut)
-  - références : `avis_id` → avis_expedition, `passage_id` → passage, `receptionnaire_id` → utilisateur
+- **reception** (<u>id</u>, *numero*, #passage_id, #avis_id, debut, fin, statut)
+  - références : `avis_id` → avis_expedition, `passage_id` → passage
 - **reception_lot** (<u>#reception_id</u>, <u>#lot_id</u>, quantite_recue, etat_palette)
   - références : `lot_id` → lot, `reception_id` → reception
-- **rendez_vous** (<u>id</u>, *numero*, #quai_id, #vehicule_id, debut, fin, sens, statut, commentaire, motif_annulation)
+- **rendez_vous** (<u>id</u>, *numero*, #quai_id, #vehicule_id, debut, fin, sens, statut, commentaire)
   - références : `quai_id` → quai, `vehicule_id` → vehicule
-- **reserve** (<u>id</u>, *numero*, date_emission, motif, transmise)
+- **reserve** (<u>id</u>, *numero*, #reception_id, date_emission, motif, transmise)
+  - références : `reception_id` → reception
 - **stock** (<u>#emplacement_id</u>, <u>#lot_id</u>, quantite)
   - références : `emplacement_id` → emplacement, `lot_id` → lot
 - **transporteur** (<u>id</u>, *siret*, raison_sociale, adresse, code_postal, ville, telephone, email)
+- **type_ecart** (<u>id</u>, *code*, libelle)
 - **type_etape** (<u>id</u>, *code*, *libelle*, *ordre*)
 - **type_vehicule** (<u>id</u>, *libelle*)
 - **unite_expedition** (<u>id</u>, *sscc*, #commande_id, #expedition_id, type, poids_kg)
   - références : `commande_id` → commande, `expedition_id` → expedition
-- **utilisateur** (<u>id</u>, *email*, nom, prenom, telephone, mot_de_passe_hash, date_creation, actif, #profil_id, #transporteur_id, #client_id)
-  - références : `client_id` → client, `profil_id` → profil, `transporteur_id` → transporteur
+- **utilisateur** (<u>id</u>, *email*, nom, prenom, telephone, mot_de_passe_hash, date_creation, actif, #profil_id, #transporteur_id)
+  - références : `profil_id` → profil, `transporteur_id` → transporteur
 - **vehicule** (<u>id</u>, *immatriculation*, #transporteur_id, #type_vehicule_id, poids_max_kg, palettes_max, frigorifique, hayon)
   - références : `transporteur_id` → transporteur, `type_vehicule_id` → type_vehicule
 - **zone** (<u>id</u>, *code*, libelle)
 - **zone_condition** (<u>#zone_id</u>, <u>#condition_stockage_id</u>)
   - références : `condition_stockage_id` → condition_stockage, `zone_id` → zone
 
-`journal_audit_archive` a la même structure que `journal_audit`.
-
 ## Tables de jointure (associations N:N)
 
-Clé primaire composée des clés étrangères : `chauffeur_habilitation`, `contenu_unite`, `ligne_avis`, `ligne_commande`, `ligne_prelevement`, `passage_etape`, `quai_equipement`, `quai_type_vehicule`, `reception_lot`, `stock`, `zone_condition`.
+Clé primaire composée des clés étrangères : `chauffeur_habilitation`, `constat_ecart`, `contenu_unite`, `ligne_avis`, `ligne_commande`, `ligne_prelevement`, `passage_etape`, `quai_equipement`, `quai_type_vehicule`, `reception_lot`, `stock`, `zone_condition`.
 
 ## Remarques de normalisation (3FN)
 
@@ -92,4 +91,9 @@ Clé primaire composée des clés étrangères : `chauffeur_habilitation`, `cont
 - Les coordonnées (adresse, code postal, ville) sont stockées telles qu'imprimées sur les documents ; la ville n'est pas déduite du code postal (plusieurs communes partagent un même code).
 - Trois dénormalisations sont assumées et maintenues **uniquement par déclencheur** : `passage.etape_courante_id` (dernière ligne de `passage_etape`), `quai.statut` (occupé / libre) et la table `stock` (synthèse de `mouvement_stock`). Elles évitent des agrégations coûteuses dans les écrans temps réel (voir `rapport_performances.md`).
 - `passage.sens` peut paraître redondant avec `rendez_vous.sens`, mais il est indispensable pour les arrivées sans rendez-vous (`rendez_vous_id` NULL).
-- L'entité « Entrée de journal » donne `journal_audit`, doublée de `journal_audit_archive` pour l'archivage nocturne. L'association « Déclencher » y devient `utilisateur_id`, volontairement sans clé étrangère : le journal doit survivre à la suppression d'un compte, et il reste NULL pour les traitements programmés.
+
+## Associations ternaires
+
+- **Prélever** (Liste de prélèvement, Lot, Emplacement) devient `ligne_prelevement`. Sa clé primaire réunit les trois clés étrangères : une même liste peut prendre un même lot sur plusieurs emplacements.
+- **Constater** (Réception, Article, Type d'écart) devient `constat_ecart`. Sa clé primaire réunit les trois clés étrangères : lors d'une réception, un même article peut présenter plusieurs types d'écart (manquant, excédent, endommagé), chacun avec sa quantité.
+- **Stocker** reste binaire (`stock` : emplacement, lot). Un lot ne concerne qu'un seul article : ajouter l'article à la clé créerait une dépendance fonctionnelle entre les pattes de l'association, contraire à la 3FN.

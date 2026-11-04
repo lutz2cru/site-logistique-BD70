@@ -69,11 +69,6 @@ echo "Création du schéma...\n";
 executerFichierSql($pdo, __DIR__ . '/01_schema.sql');
 executerFichierSql($pdo, __DIR__ . '/02_automatisation.sql');
 $pdo->exec('USE entrepot');
-try {
-    $pdo->exec('SET GLOBAL event_scheduler = ON');
-} catch (PDOException) {
-    echo "  (impossible d'activer event_scheduler : droits insuffisants)\n";
-}
 
 // ---------------------------------------------------------------------
 //  Utilitaires
@@ -127,12 +122,11 @@ echo "Données de référence...\n";
 $pdo->beginTransaction();
 
 $profils = [
-    'admin'        => ['Administrateur', 'Gestion des comptes, des droits et du journal'],
+    'admin'        => ['Administrateur', 'Gestion des comptes et des droits'],
     'responsable'  => ['Responsable d\'exploitation', 'Planification des quais, pilotage de l\'activité'],
     'accueil'      => ['Agent d\'accueil', 'Poste de garde : arrivées et départs des camions'],
     'magasinier'   => ['Magasinier / Préparateur', 'Réception, stockage et préparation des commandes'],
     'transporteur' => ['Transporteur', 'Accès limité à la prise de rendez-vous'],
-    'client'       => ['Client propriétaire', 'Portail client : stock, commandes et suivi des expéditions'],
 ];
 $profilId = [];
 foreach ($profils as $code => [$lib, $desc]) {
@@ -152,6 +146,11 @@ $etapeId = [];
 $ordre = 0;
 foreach ($etapes as $code => $lib) {
     $etapeId[$code] = inserer($pdo, 'type_etape', ['code' => $code, 'libelle' => $lib, 'ordre' => ++$ordre]);
+}
+
+$typesEcart = ['manquant' => 'Manquant', 'excedent' => 'Excédent', 'endommage' => 'Marchandise endommagée'];
+foreach ($typesEcart as $code => $lib) {
+    inserer($pdo, 'type_ecart', ['code' => $code, 'libelle' => $lib]);
 }
 
 $typesVehicule = ['Semi-remorque', 'Porteur 19 t', 'Porteur 12 t', 'Fourgon'];
@@ -370,14 +369,6 @@ foreach ($nomsClients as $nom) {
         'code_postal' => $cp, 'ville' => $ville, 'telephone' => telephone(),
         'email' => 'logistique@' . strtolower(preg_replace('/[^a-z]/i', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nom))) . '.test']);
 }
-// comptes du portail client (le compte de démonstration représente la Fromagerie Comtoise)
-inserer($pdo, 'utilisateur', ['email' => 'client@entrepot.test', 'nom' => 'Vuillemin', 'prenom' => 'Claire',
-    'telephone' => telephone(), 'mot_de_passe_hash' => $hash, 'actif' => 1, 'profil_id' => $profilId['client'], 'client_id' => $clients[1]]);
-foreach ([0, 2, 5] as $i) {
-    inserer($pdo, 'utilisateur', ['email' => 'portail@' . strtolower(preg_replace('/[^a-z]/i', '', iconv('UTF-8', 'ASCII//TRANSLIT', $nomsClients[$i]))) . '.test',
-        'nom' => alea($noms), 'prenom' => alea($prenoms), 'mot_de_passe_hash' => $hash, 'actif' => 1,
-        'profil_id' => $profilId['client'], 'client_id' => $clients[$i]]);
-}
 $fournisseurs = [];
 for ($i = 1; $i <= 30; $i++) {
     [$adr, $cp, $ville] = adresse($rues, $villes);
@@ -557,7 +548,7 @@ function simulerReception(PDO $pdo, array $ctx, int $passageId, array $t, bool $
         foreach ($lignes as $a => $q) { inserer($pdo, 'ligne_avis', ['avis_id' => $avisId, 'article_id' => $a, 'quantite_attendue' => $q]); }
     }
     $magasinier = alea($utilisateurs['magasinier']);
-    $recId = inserer($pdo, 'reception', ['passage_id' => $passageId, 'avis_id' => $avisId, 'receptionnaire_id' => $magasinier,
+    $recId = inserer($pdo, 'reception', ['passage_id' => $passageId, 'avis_id' => $avisId,
         'debut' => dt($t['DEBUT_OP']), 'statut' => 'en_cours']);
 
     foreach ($lignes as $a => $attendu) {
@@ -601,14 +592,14 @@ function simulerReception(PDO $pdo, array $ctx, int $passageId, array $t, bool $
     if ($cloturer) {
         $pdo->prepare('UPDATE reception SET fin = ? WHERE id = ?')->execute([dt($t['FIN_OP']), $recId]);
         $pdo->prepare('CALL cloturer_reception(?)')->execute([$recId]);
-        // réserve émise auprès du transporteur pour les écarts de casse et une partie des manquants
-        $ecarts = $pdo->query("SELECT id, type FROM ecart WHERE reception_id = $recId")->fetchAll();
-        $aReserver = array_filter($ecarts, fn($e) => $e['type'] === 'endommage' || ($e['type'] === 'manquant' && proba(0.5)));
+        // réserve émise auprès du transporteur en cas de casse, et pour une partie des manquants
+        $types = $pdo->query("SELECT te.code FROM constat_ecart ce JOIN type_ecart te ON te.id = ce.type_ecart_id
+                               WHERE ce.reception_id = $recId")->fetchAll(PDO::FETCH_COLUMN);
+        $aReserver = array_filter($types, fn($c) => $c === 'endommage' || ($c === 'manquant' && proba(0.5)));
         if ($aReserver) {
-            $resId = inserer($pdo, 'reserve', ['date_emission' => dt($t['FIN_OP']),
+            inserer($pdo, 'reserve', ['reception_id' => $recId, 'date_emission' => dt($t['FIN_OP']),
                 'motif' => count($aReserver) > 1 ? 'Colis manquants et/ou endommagés à la livraison' : 'Réserve sur l\'état de la marchandise',
                 'transmise' => (int) proba(0.8)]);
-            $pdo->exec("UPDATE ecart SET reserve_id = $resId WHERE id IN (" . implode(',', array_column($aReserver, 'id')) . ')');
         }
         $compteurs['receptions']++;
     }
@@ -629,7 +620,7 @@ function simulerExpedition(PDO $pdo, array $ctx, int $passageId, array $t, bool 
         $client = alea(array_keys($parClient));
         [$adr, $cp, $ville] = adresse($rues, $villes);
         $dateCmd = $t['ARRIVEE']->modify('-' . entre(1, 4) . ' days');
-        $cmdId = inserer($pdo, 'commande', ['client_id' => $client, 'date_commande' => $dateCmd->format('Y-m-d'), 'canal' => proba(0.3) ? 'portail' : 'edi',
+        $cmdId = inserer($pdo, 'commande', ['client_id' => $client, 'date_commande' => $dateCmd->format('Y-m-d'),
             'expedition_souhaitee' => $t['ARRIVEE']->format('Y-m-d'), 'adresse_livraison' => $adr,
             'code_postal' => $cp, 'ville' => $ville, 'statut' => 'recue']);
         $choix = (array) array_rand(array_flip($parClient[$client]), min(count($parClient[$client]), entre(1, 4)));
@@ -739,11 +730,10 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
         if ($ev['rdv']) {
             $statut = 'planifie';
             if ($passe || $enCours) {
-                $statut = proba(0.06) ? 'annule' : (proba(0.05) ? 'absent' : 'honore');
+                $statut = proba(0.06) ? 'annule' : 'honore';
             }
             $rdvId = inserer($pdo, 'rendez_vous', ['quai_id' => $qid, 'vehicule_id' => $vid, 'debut' => dt($ev['debut']),
                 'fin' => dt(plusMin($ev['debut'], 60)), 'sens' => $sens, 'statut' => $statut === 'honore' ? 'planifie' : $statut,
-                'motif_annulation' => $statut === 'annule' ? alea(['Commande reportée par le client', 'Panne du véhicule', 'Grève', 'Erreur de planification']) : null,
                 'commentaire' => proba(0.1) ? alea(['Livraison urgente', 'Prévoir transpalette électrique', 'Chargement en vrac', 'Hayon obligatoire']) : null]);
             $compteurs['rdv']++;
             if ($statut !== 'honore') { continue; }
@@ -755,7 +745,7 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
         $arrivee = $sansMs(plusMin($ev['debut'], $ev['rdv'] ? $retard : 0));
         if ($enCours && $arrivee > $maintenant) { $arrivee = plusMin($maintenant, -entre(5, 30)); }
         $pid = inserer($pdo, 'passage', ['rendez_vous_id' => $rdvId, 'vehicule_id' => $vid, 'chauffeur_id' => $chid, 'sens' => $sens,
-            'observations' => $ev['rdv'] ? null : 'Arrivée sans rendez-vous', 'borne' => $ev['rdv'] && proba(0.4) ? 1 : 0]);
+            'observations' => $ev['rdv'] ? null : 'Arrivée sans rendez-vous']);
         $compteurs['passages']++;
 
         // un camion en cours s'arrête à une étape compatible avec l'heure actuelle
@@ -837,7 +827,6 @@ foreach ($rdvReception as $debut) {
 }
 
 // Quelques emplacements bloqués et le quai hors service
-$pdo->exec('SET @utilisateur_id = 1');
 $pdo->exec('UPDATE emplacement SET bloque = TRUE WHERE id IN (SELECT id FROM (SELECT e.id FROM emplacement e LEFT JOIN stock s ON s.emplacement_id = e.id WHERE s.lot_id IS NULL ORDER BY e.id DESC LIMIT 8) x)');
 $pdo->exec("UPDATE quai SET statut = 'hors_service' WHERE id = $quaiHorsService");
 $pdo->commit();
@@ -845,14 +834,14 @@ $pdo->commit();
 // ---------------------------------------------------------------------
 //  Compte de l'application : moindre privilège
 // ---------------------------------------------------------------------
-// Lecture partout, écriture table par table : ni `stock` ni le journal, tenus par les
+// Lecture partout, écriture table par table, sauf `stock`, tenu par les
 // déclencheurs (qui s'exécutent avec les droits de leur créateur), ni structure.
 foreach (['localhost', '127.0.0.1'] as $origine) {
     $compte = "'" . COMPTE_APPLI . "'@'$origine'";
     $pdo->exec("CREATE OR REPLACE USER $compte IDENTIFIED BY '" . MOT_DE_PASSE_APPLI . "'");
     $pdo->exec("GRANT SELECT, EXECUTE ON entrepot.* TO $compte");
     $ecriture = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'entrepot' AND table_type = 'BASE TABLE'
-                              AND table_name NOT IN ('stock', 'journal_audit', 'journal_audit_archive')")->fetchAll(PDO::FETCH_COLUMN);
+                              AND table_name <> 'stock'")->fetchAll(PDO::FETCH_COLUMN);
     foreach ($ecriture as $t) { $pdo->exec("GRANT INSERT, UPDATE, DELETE ON entrepot.`$t` TO $compte"); }
 }
 
@@ -865,4 +854,4 @@ foreach ($tables as $t) {
     $n = $pdo->query("SELECT COUNT(*) FROM `{$t['table_name']}`")->fetchColumn();
     printf("  %-26s %8d\n", $t['table_name'], $n);
 }
-echo "\nComptes de démonstration (mot de passe : " . MOT_DE_PASSE_DEMO . ") : admin@, responsable@, accueil@, magasinier@, transporteur@, client@entrepot.test\n";
+echo "\nComptes de démonstration (mot de passe : " . MOT_DE_PASSE_DEMO . ") : admin@, responsable@, accueil@, magasinier@, transporteur@entrepot.test\n";

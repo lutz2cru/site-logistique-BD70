@@ -9,11 +9,7 @@ function menu(): array
     $exploitation = ['responsable', 'accueil', 'magasinier'];
     return [
         '' => [
-            ['Tableau de bord', 'index.php', ['responsable', 'accueil', 'magasinier', 'transporteur', 'admin', 'client']],
-        ],
-        'Mon espace client' => [
-            ['Mon stock', 'client_stock.php', ['client']],
-            ['Mes commandes', 'client_commandes.php', ['client']],
+            ['Tableau de bord', 'index.php', ['responsable', 'accueil', 'magasinier', 'transporteur', 'admin']],
         ],
         'Quais et rendez-vous' => [
             ['Planning des quais', 'planning.php', ['responsable', 'accueil', 'transporteur']],
@@ -22,8 +18,6 @@ function menu(): array
         ],
         'Flux de camions' => [
             ['Camions sur site', 'flux.php', $exploitation],
-            ['Écran d\'appel du parking', 'ecran.php', ['accueil', 'responsable']],
-            ['Borne chauffeurs', 'borne.php', ['accueil']],
             ['Historique des passages', 'passages.php', ['responsable', 'accueil']],
         ],
         'Réception' => [
@@ -56,7 +50,6 @@ function menu(): array
         ],
         'Administration' => [
             ['Utilisateurs', 'utilisateurs.php', ['admin']],
-            ['Journal des modifications', 'journal.php', ['admin']],
         ],
     ];
 }

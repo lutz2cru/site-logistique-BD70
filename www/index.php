@@ -37,76 +37,25 @@ if ($u['profil'] === 'transporteur') {
     exit;
 }
 
-// Le client propriétaire suit son stock et ses commandes depuis le portail
-if ($u['profil'] === 'client') {
-    $c = ligne("SELECT cl.raison_sociale,
-                       (SELECT COALESCE(SUM(s.quantite), 0) FROM stock s JOIN lot l ON l.id = s.lot_id JOIN article ar ON ar.id = l.article_id
-                         WHERE ar.client_id = cl.id) AS unites,
-                       (SELECT COUNT(*) FROM v_lots_proches_dlc d JOIN lot l ON l.id = d.lot_id JOIN article ar ON ar.id = l.article_id
-                         WHERE ar.client_id = cl.id AND d.jours_restants <= 7) AS dlc_7j,
-                       (SELECT COUNT(*) FROM commande WHERE client_id = cl.id AND statut IN ('recue','en_preparation','preparee')) AS en_cours,
-                       (SELECT COUNT(*) FROM commande WHERE client_id = cl.id AND statut = 'expediee'
-                           AND expedition_souhaitee >= CURRENT_DATE - INTERVAL 30 DAY) AS expediees_30j
-                  FROM client cl WHERE cl.id = ?", [$u['client_id']]);
-    $prochaines = lignes("SELECT id, numero, expedition_souhaitee, statut FROM commande
-                           WHERE client_id = ? AND statut IN ('recue','en_preparation','preparee')
-                           ORDER BY expedition_souhaitee, numero LIMIT 10", [$u['client_id']]);
-    entete('Tableau de bord');
-    ?>
-    <div class="entete-page">
-        <p>Espace client de <strong><?= e($c['raison_sociale']) ?></strong> : suivez votre stock et vos commandes jusqu'au départ du camion.</p>
-        <a class="bouton" href="client_commande.php">+ Nouvelle commande</a>
-    </div>
-    <div class="kpis">
-        <div class="kpi"><div class="valeur"><?= nombre($c['unites']) ?></div><div class="libelle">unités en stock</div></div>
-        <div class="kpi"><div class="valeur"><?= $c['dlc_7j'] ?></div><div class="libelle">lots périmant sous 7 jours</div></div>
-        <div class="kpi"><div class="valeur"><?= $c['en_cours'] ?></div><div class="libelle">commandes en cours</div></div>
-        <div class="kpi"><div class="valeur"><?= $c['expediees_30j'] ?></div><div class="libelle">commandes expédiées (30 jours)</div></div>
-    </div>
-    <div class="carte">
-        <h2>Commandes en cours <a class="bouton petit secondaire" href="client_commandes.php">Toutes mes commandes</a></h2>
-        <?php if (!$prochaines): ?><p class="vide">Aucune commande en cours.</p><?php else: ?>
-        <div class="tableau"><table>
-            <tr><th>Commande</th><th>Expédition souhaitée</th><th>Statut</th></tr>
-            <?php foreach ($prochaines as $p): ?>
-            <tr><td><a href="client_commande.php?id=<?= $p['id'] ?>"><?= e($p['numero']) ?></a></td>
-                <td><?= date_fr($p['expedition_souhaitee']) ?></td><td><?= pastille($p['statut']) ?></td></tr>
-            <?php endforeach; ?>
-        </table></div>
-        <?php endif; ?>
-    </div>
-    <?php
-    pied();
-    exit;
-}
-
 // L'administrateur gère le système d'information, pas l'exploitation
 if ($u['profil'] === 'admin') {
     $c = ligne("SELECT SUM(actif = FALSE) AS en_attente, SUM(actif = TRUE) AS actifs FROM utilisateur");
     $parProfil = lignes("SELECT p.libelle, COUNT(u.id) AS nb FROM profil p LEFT JOIN utilisateur u ON u.profil_id = p.id AND u.actif
                           GROUP BY p.id ORDER BY p.id");
-    $journal = (int) valeur("SELECT COUNT(*) FROM journal_audit WHERE date_heure >= CURRENT_DATE - INTERVAL 7 DAY");
     entete('Tableau de bord');
     ?>
     <div class="kpis">
         <div class="kpi"><div class="valeur"><?= (int) $c['en_attente'] ?></div><div class="libelle">inscriptions à valider</div></div>
         <div class="kpi"><div class="valeur"><?= (int) $c['actifs'] ?></div><div class="libelle">comptes actifs</div></div>
-        <div class="kpi"><div class="valeur"><?= nombre($journal) ?></div><div class="libelle">modifications journalisées (7 jours)</div></div>
     </div>
-    <div class="grille">
-        <div class="carte">
-            <h2>Comptes actifs par profil <a class="bouton petit secondaire" href="utilisateurs.php?actif=0">Inscriptions en attente</a></h2>
-            <div class="tableau"><table>
-                <tr><th>Profil</th><th class="nombre">Comptes</th></tr>
-                <?php foreach ($parProfil as $p): ?>
-                <tr><td><?= e($p['libelle']) ?></td><td class="nombre"><?= $p['nb'] ?></td></tr>
-                <?php endforeach; ?>
-            </table></div>
-        </div>
-        <div class="carte">
-            <h2>Journal des modifications <a class="bouton petit secondaire" href="journal.php">Consulter</a></h2>
-            <p class="discret">Traçabilité des modifications sensibles (rendez-vous, quais, articles, emplacements, comptes), alimentée par les déclencheurs de la base.</p>
-        </div>
+    <div class="carte">
+        <h2>Comptes actifs par profil <a class="bouton petit secondaire" href="utilisateurs.php?actif=0">Inscriptions en attente</a></h2>
+        <div class="tableau"><table>
+            <tr><th>Profil</th><th class="nombre">Comptes</th></tr>
+            <?php foreach ($parProfil as $p): ?>
+            <tr><td><?= e($p['libelle']) ?></td><td class="nombre"><?= $p['nb'] ?></td></tr>
+            <?php endforeach; ?>
+        </table></div>
     </div>
     <?php
     pied();

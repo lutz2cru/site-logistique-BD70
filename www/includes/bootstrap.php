@@ -30,8 +30,6 @@ function db(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]);
-        // utilisé par les déclencheurs d'historisation (journal_audit)
-        $pdo->prepare('SET @utilisateur_id = ?')->execute([$_SESSION['utilisateur']['id'] ?? null]);
     }
     return $pdo;
 }
@@ -82,7 +80,7 @@ function exiger_connexion(): array
         rediriger('connexion.php');
     }
     // relu à chaque page : un compte désactivé ou modifié par l'administrateur prend effet aussitôt
-    $compte = ligne('SELECT u.actif, u.transporteur_id, u.client_id, p.code, p.libelle
+    $compte = ligne('SELECT u.actif, u.transporteur_id, p.code, p.libelle
                        FROM utilisateur u JOIN profil p ON p.id = u.profil_id WHERE u.id = ?', [$_SESSION['utilisateur']['id']]);
     if (!$compte || !$compte['actif']) {
         unset($_SESSION['utilisateur']);
@@ -92,7 +90,6 @@ function exiger_connexion(): array
     $_SESSION['utilisateur'] = array_merge($_SESSION['utilisateur'], [
         'profil' => $compte['code'], 'profil_libelle' => $compte['libelle'],
         'transporteur_id' => $compte['transporteur_id'] !== null ? (int) $compte['transporteur_id'] : null,
-        'client_id' => $compte['client_id'] !== null ? (int) $compte['client_id'] : null,
     ]);
     return utilisateur();
 }
@@ -159,14 +156,14 @@ function duree(?int $minutes): string
 /** Libellés et couleurs des statuts affichés sous forme de pastilles. */
 const STATUTS = [
     'libre' => ['Libre', 'vert'], 'reserve' => ['Réservé', 'bleu'], 'occupe' => ['Occupé', 'orange'], 'hors_service' => ['Hors service', 'gris'],
-    'planifie' => ['Planifié', 'bleu'], 'honore' => ['Honoré', 'vert'], 'annule' => ['Annulé', 'gris'], 'absent' => ['Absent', 'rouge'],
+    'planifie' => ['Planifié', 'bleu'], 'honore' => ['Honoré', 'vert'], 'annule' => ['Annulé', 'gris'],
     'en_cours' => ['En cours', 'orange'], 'cloturee' => ['Clôturée', 'vert'],
     'attendu' => ['Attendu', 'bleu'], 'recu' => ['Reçu', 'vert'],
     'manquant' => ['Manquant', 'rouge'], 'excedent' => ['Excédent', 'orange'], 'endommage' => ['Endommagé', 'rouge'],
     'bon' => ['Bon', 'vert'], 'refuse' => ['Refusé', 'rouge'],
     'entree' => ['Entrée', 'vert'], 'sortie' => ['Sortie', 'rouge'], 'transfert' => ['Transfert', 'bleu'], 'ajustement' => ['Ajustement', 'orange'],
     'reception' => ['Réception', 'bleu'], 'expedition' => ['Expédition', 'violet'], 'mixte' => ['Mixte', 'gris'],
-    'a_faire' => ['À faire', 'bleu'], 'terminee' => ['Terminée', 'vert'], 'recue' => ['Reçue', 'bleu'], 'edi' => ['EDI', 'gris'], 'portail' => ['Portail', 'violet'],
+    'a_faire' => ['À faire', 'bleu'], 'terminee' => ['Terminée', 'vert'], 'recue' => ['Reçue', 'bleu'],
     'en_chargement' => ['En chargement', 'orange'], 'chargee' => ['Chargée', 'bleu'], 'partie' => ['Partie', 'vert'],
     'en_preparation' => ['En préparation', 'orange'], 'preparee' => ['Préparée', 'bleu'], 'expediee' => ['Expédiée', 'vert'], 'annulee' => ['Annulée', 'gris'],
     'colis' => ['Colis', 'bleu'], 'palette' => ['Palette', 'violet'],

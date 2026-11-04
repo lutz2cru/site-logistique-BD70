@@ -63,11 +63,11 @@ $requetes = [
     ['Remplissage par zone', 'Vue v_remplissage_zone (somme des palettes par zone)', 'SELECT * FROM v_remplissage_zone', []],
     ['Taux d\'écart par fournisseur', 'Réceptions clôturées sur 30 jours (indicateurs.php)',
      "SELECT f.raison_sociale, COUNT(DISTINCT r.id), COUNT(DISTINCT e.reception_id) FROM reception r
-        JOIN avis_expedition a ON a.id = r.avis_id JOIN fournisseur f ON f.id = a.fournisseur_id LEFT JOIN ecart e ON e.reception_id = r.id
+        JOIN avis_expedition a ON a.id = r.avis_id JOIN fournisseur f ON f.id = a.fournisseur_id LEFT JOIN constat_ecart e ON e.reception_id = r.id
        WHERE r.statut = 'cloturee' AND r.debut >= CURRENT_DATE - INTERVAL 30 DAY GROUP BY f.id", []],
     ['Lots proches de la DLC', 'Vue v_lots_proches_dlc (index sur la date limite)', 'SELECT * FROM v_lots_proches_dlc', []],
     ['Proposition d\'emplacements', 'Procédure stockée proposer_emplacements (rangement)', 'CALL proposer_emplacements(?, 1, 8)', [$article]],
-    ['Stock disponible d\'un client', 'Stock physique moins lignes réservées (portail client, commande)',
+    ['Stock disponible d\'un client', 'Stock physique moins lignes réservées (saisie de commande)',
      "SELECT ar.id, COALESCE((SELECT SUM(s.quantite) FROM stock s JOIN lot l ON l.id = s.lot_id WHERE l.article_id = ar.id), 0)
            - COALESCE((SELECT SUM(lp.quantite_a_prelever) FROM ligne_prelevement lp JOIN liste_prelevement li ON li.id = lp.liste_id
                          JOIN lot l ON l.id = lp.lot_id WHERE l.article_id = ar.id AND li.statut <> 'terminee' AND lp.quantite_prelevee IS NULL), 0) AS dispo

@@ -6,7 +6,6 @@ $moi = exiger_profil('admin');
 
 $profils = paires('SELECT id, libelle FROM profil ORDER BY id');
 $transporteurs = paires('SELECT id, raison_sociale FROM transporteur ORDER BY raison_sociale');
-$clients = paires('SELECT id, raison_sociale FROM client ORDER BY raison_sociale');
 
 if (est_post()) {
     verifier_csrf();
@@ -18,12 +17,10 @@ if (est_post()) {
         if (isset($_POST['enregistrer'])) {
             if (!isset($profils[$_POST['profil_id'] ?? ''])) { throw new RuntimeException('Profil invalide.'); }
             $transp = $_POST['transporteur_id'] ?? '';
-            $client = $_POST['client_id'] ?? '';
             $code = valeur("SELECT code FROM profil WHERE id = ?", [$_POST['profil_id']]);
             if ($code === 'transporteur' && !isset($transporteurs[$transp])) { throw new RuntimeException('Un compte transporteur doit être rattaché à une société.'); }
-            if ($code === 'client' && !isset($clients[$client])) { throw new RuntimeException('Un compte client doit être rattaché à un client propriétaire.'); }
-            requete('UPDATE utilisateur SET profil_id = ?, transporteur_id = ?, client_id = ?, actif = ? WHERE id = ?',
-                    [$_POST['profil_id'], $code === 'transporteur' ? $transp : null, $code === 'client' ? $client : null, isset($_POST['actif']) ? 1 : 0, $id]);
+            requete('UPDATE utilisateur SET profil_id = ?, transporteur_id = ?, actif = ? WHERE id = ?',
+                    [$_POST['profil_id'], $code === 'transporteur' ? $transp : null, isset($_POST['actif']) ? 1 : 0, $id]);
             flash('succes', 'Compte mis à jour.');
         } elseif (isset($_POST['reinitialiser'])) {
             $mdp = $_POST['mot_de_passe'] ?? '';
@@ -66,17 +63,14 @@ entete('Utilisateurs');
         <a class="bouton discret" href="utilisateurs.php">Réinitialiser</a>
     </form>
     <div class="tableau"><table>
-        <tr><th>Nom</th><th>E-mail</th><th>Créé le</th><th>Profil</th><th>Société rattachée</th><th>Actif</th><th></th></tr>
+        <tr><th>Nom</th><th>E-mail</th><th>Créé le</th><th>Profil</th><th>Transporteur rattaché</th><th>Actif</th><th></th></tr>
         <?php foreach ($utilisateurs as $x): $form = "f{$x['id']}"; ?>
         <tr>
             <td><strong><?= e($x['prenom'] . ' ' . $x['nom']) ?></strong><?= $x['id'] === $moi['id'] ? ' <small>(vous)</small>' : '' ?></td>
             <td><?= e($x['email']) ?></td>
             <td><?= date_fr($x['date_creation']) ?></td>
             <td><select name="profil_id" form="<?= $form ?>"><?= options($profils, $x['profil_id']) ?></select></td>
-            <td>
-                <select name="transporteur_id" form="<?= $form ?>" title="Transporteur"><?= options($transporteurs, $x['transporteur_id'], '— transporteur —') ?></select>
-                <select name="client_id" form="<?= $form ?>" title="Client propriétaire"><?= options($clients, $x['client_id'], '— client —') ?></select>
-            </td>
+            <td><select name="transporteur_id" form="<?= $form ?>" title="Transporteur"><?= options($transporteurs, $x['transporteur_id'], '—') ?></select></td>
             <td><input type="checkbox" name="actif" value="1" form="<?= $form ?>" <?= $x['actif'] ? 'checked' : '' ?>></td>
             <td class="actions-ligne">
                 <form method="post" id="<?= $form ?>">

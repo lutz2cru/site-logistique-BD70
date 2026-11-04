@@ -31,10 +31,9 @@ foreach ($pdo->query("SELECT table_name, column_name FROM statistics WHERE table
 }
 
 $md = "# Modèle logique — schéma relationnel\n\n";
-$md .= "Généré automatiquement depuis la base `$base` (" . count($tables) . " tables). Notation : <u>clé primaire</u>, #clé étrangère (→ table référencée), *unique*.\n\n";
+$md .= "Déduit du diagramme entité-association, généré depuis la base `$base` (" . count($tables) . " tables). Notation : <u>clé primaire</u>, #clé étrangère (→ table référencée), *unique*.\n\n";
 $jonctions = [];
 foreach ($tables as $t) {
-    if ($t === 'journal_audit_archive') { continue; }
     $attrs = [];
     foreach ($colonnes[$t] as $c) {
         $n = $c['column_name'];
@@ -48,7 +47,6 @@ foreach ($tables as $t) {
     if ($refs) { $md .= "  - références : " . implode(', ', $refs) . "\n"; }
     if (count($pk[$t] ?? []) > 1) { $jonctions[] = $t; }
 }
-$md .= "\n`journal_audit_archive` a la même structure que `journal_audit`.\n";
 $md .= "\n## Tables de jointure (associations N:N)\n\n";
 $md .= "Clé primaire composée des clés étrangères : " . implode(', ', array_map(fn($t) => "`$t`", $jonctions)) . ".\n";
 $md .= "\n## Remarques de normalisation (3FN)\n\n";
@@ -56,7 +54,10 @@ $md .= "- Chaque attribut non clé dépend de toute la clé et uniquement d'elle
 $md .= "- Les coordonnées (adresse, code postal, ville) sont stockées telles qu'imprimées sur les documents ; la ville n'est pas déduite du code postal (plusieurs communes partagent un même code).\n";
 $md .= "- Trois dénormalisations sont assumées et maintenues **uniquement par déclencheur** : `passage.etape_courante_id` (dernière ligne de `passage_etape`), `quai.statut` (occupé / libre) et la table `stock` (synthèse de `mouvement_stock`). Elles évitent des agrégations coûteuses dans les écrans temps réel (voir `rapport_performances.md`).\n";
 $md .= "- `passage.sens` peut paraître redondant avec `rendez_vous.sens`, mais il est indispensable pour les arrivées sans rendez-vous (`rendez_vous_id` NULL).\n";
-$md .= "- L'entité « Entrée de journal » donne `journal_audit`, doublée de `journal_audit_archive` pour l'archivage nocturne. L'association « Déclencher » y devient `utilisateur_id`, volontairement sans clé étrangère : le journal doit survivre à la suppression d'un compte, et il reste NULL pour les traitements programmés.\n";
+$md .= "\n## Associations ternaires\n\n";
+$md .= "- **Prélever** (Liste de prélèvement, Lot, Emplacement) devient `ligne_prelevement`. Sa clé primaire réunit les trois clés étrangères : une même liste peut prendre un même lot sur plusieurs emplacements.\n";
+$md .= "- **Constater** (Réception, Article, Type d'écart) devient `constat_ecart`. Sa clé primaire réunit les trois clés étrangères : lors d'une réception, un même article peut présenter plusieurs types d'écart (manquant, excédent, endommagé), chacun avec sa quantité.\n";
+$md .= "- **Stocker** reste binaire (`stock` : emplacement, lot). Un lot ne concerne qu'un seul article : ajouter l'article à la clé créerait une dépendance fonctionnelle entre les pattes de l'association, contraire à la 3FN.\n";
 
 @mkdir(__DIR__ . '/../docs');
 file_put_contents(__DIR__ . '/../docs/schema_relationnel.md', $md);
