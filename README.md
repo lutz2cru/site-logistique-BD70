@@ -56,7 +56,8 @@ sql/
 www/                       site web (une page PHP par écran, gabarit commun dans includes/)
 docs/                      rapport de projet, cahier des charges, fiches de cas d'utilisation,
                            schéma relationnel, rapport de performances
-uml/                       diagramme de cas d'utilisation, diagramme entité-association
+uml/                       diagramme de cas d'utilisation, diagramme entité-association,
+                           schéma relationnel (generer_schema_relationnel.py le régénère depuis 01_schema.sql)
 ```
 
 ## Fonctionnalités web

@@ -51,7 +51,9 @@ Le diagramme entité-association (`uml/diagramme_entite_association.png`) compte
 
 ### 3.2 Modèle logique
 
-Le modèle relationnel compte 46 tables : les 34 entités, les associations N:N devenues tables de jointure, et l'archive du journal. Il est détaillé dans `schema_relationnel.md`.
+Le modèle relationnel compte 46 tables : les 34 entités, les associations N:N devenues tables de jointure, et l'archive du journal. Le schéma `uml/schema_relationnel.png` le représente : clés primaires soulignées, clés étrangères préfixées par `#` et reliées par une flèche à la table référencée, valeurs uniques en italique. Le détail table par table figure dans `schema_relationnel.md`.
+
+*[Insérer ici uml/schema_relationnel.png]*
 
 Principes retenus :
 - Chaque table a une clé primaire artificielle `id`, sauf les tables de jointure, dont la clé est composée des clés étrangères.
