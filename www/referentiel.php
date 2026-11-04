@@ -11,8 +11,8 @@ $refs = referentiels();
 $cle = filtre('t');
 if (!isset($refs[$cle])) { rediriger('index.php'); }
 $ref = $refs[$cle];
-exiger_profil(...$ref['lecture']);
-$ecriture = a_profil(...$ref['ecriture']);
+exiger_profil_parmi($ref['lecture']);
+$ecriture = profil_parmi($ref['ecriture']);
 $table = $ref['table'];
 $url = 'referentiel.php?t=' . $cle;
 
@@ -23,7 +23,7 @@ function options_champ(array $def): array
 }
 
 /** Contrôle et normalisation d'une saisie selon le type du champ ; retourne [valeur, erreur]. */
-function valider(array $def, mixed $brut): array
+function valider(array $def, $brut): array
 {
     [$lib, $type] = $def;
     if ($type === 'booleen') { return [$brut ? 1 : 0, null]; }
@@ -54,8 +54,12 @@ function valider(array $def, mixed $brut): array
 }
 
 $champs = $ref['champs'];
-$simples = array_filter($champs, fn($d) => $d[1] !== 'multi');
-$multis = array_filter($champs, fn($d) => $d[1] === 'multi');
+$simples = [];     // champs stockés dans la table elle-même
+$multis = [];      // champs à choix multiples, stockés dans une table de jointure
+foreach ($champs as $nom => $def) {
+    if ($def[1] === 'multi') { $multis[$nom] = $def; }
+    else { $simples[$nom] = $def; }
+}
 $erreurs = [];
 $edition = isset($_GET['modifier']) || isset($_GET['nouveau']);
 $id = (int) ($_GET['modifier'] ?? 0);
@@ -86,8 +90,11 @@ if (est_post() && $ecriture) {
             $pdo->beginTransaction();
             $cols = array_keys($valeurs);
             if ($id) {
-                $set = implode(', ', array_map(fn($c) => "`$c` = ?", $cols));
-                requete("UPDATE `$table` SET $set WHERE id = ?", [...array_values($valeurs), $id]);
+                $set = [];
+                foreach ($cols as $c) { $set[] = "`$c` = ?"; }
+                $params = array_values($valeurs);
+                $params[] = $id;
+                requete("UPDATE `$table` SET " . implode(', ', $set) . " WHERE id = ?", $params);
             } else {
                 $ph = implode(', ', array_fill(0, count($cols), '?'));
                 requete("INSERT INTO `$table` (`" . implode('`, `', $cols) . "`) VALUES ($ph)", array_values($valeurs));
@@ -98,12 +105,17 @@ if (est_post() && $ecriture) {
                 $coches = array_intersect(array_map('intval', $_POST[$nom] ?? []), array_keys(options_champ($def)));
                 if ($coches) {
                     $ph = implode(',', array_fill(0, count($coches), '?'));
-                    requete("DELETE FROM `{$def['jonction']}` WHERE `{$def['cle']}` = ? AND `{$def['autre']}` NOT IN ($ph)", [$id, ...$coches]);
+                    requete("DELETE FROM `{$def['jonction']}` WHERE `{$def['cle']}` = ? AND `{$def['autre']}` NOT IN ($ph)", array_merge([$id], $coches));
                 } else {
                     requete("DELETE FROM `{$def['jonction']}` WHERE `{$def['cle']}` = ?", [$id]);
                 }
-                $extraCols = implode('', array_map(fn($c) => ", `$c`", array_keys($def['defauts'] ?? [])));
-                $extraVals = implode('', array_map(fn($v) => ", $v", $def['defauts'] ?? []));
+                // colonnes de la jointure remplies avec une valeur par défaut (ex. date d'obtention)
+                $extraCols = '';
+                $extraVals = '';
+                foreach ($def['defauts'] ?? [] as $c => $v) {
+                    $extraCols .= ", `$c`";
+                    $extraVals .= ", $v";
+                }
                 foreach ($coches as $o) {
                     requete("INSERT IGNORE INTO `{$def['jonction']}` (`{$def['cle']}`, `{$def['autre']}`$extraCols) VALUES (?, ?$extraVals)", [$id, $o]);
                 }
@@ -151,12 +163,14 @@ if ($edition && $ecriture) {
                 <?php elseif ($type === 'liste'): ?>
                     <label><span class="<?= $classeLib ?>"><?= e($lib) ?></span><select name="<?= $nom ?>" <?= $req ?>><?= options(options_champ($def), $val, '— Choisir —') ?></select></label>
                 <?php else:
-                    $html = match ($type) { 'email' => 'email', 'date' => 'date', 'entier', 'decimal' => 'number', 'tel' => 'tel', default => 'text' };
+                    $types_html = ['email' => 'email', 'date' => 'date', 'entier' => 'number', 'decimal' => 'number', 'tel' => 'tel'];
+                    $html = $types_html[$type] ?? 'text';
                     $attrs = $type === 'decimal' ? 'step="any"' : '';
                     if (isset($def['min'])) { $attrs .= ' min="' . $def['min'] . '"'; }
                     if (isset($def['maxv'])) { $attrs .= ' max="' . $def['maxv'] . '"'; }
                     if (isset($def['max'])) { $attrs .= ' maxlength="' . $def['max'] . '"'; }
-                    $motif = $def['motif'] ?? match ($type) { 'siret' => '[0-9 ]{14,17}', 'cp' => '[0-9]{5}', 'immat' => '[A-Za-z]{2}-[0-9]{3}-[A-Za-z]{2}', default => null };
+                    $motifs = ['siret' => '[0-9 ]{14,17}', 'cp' => '[0-9]{5}', 'immat' => '[A-Za-z]{2}-[0-9]{3}-[A-Za-z]{2}'];
+                    $motif = $def['motif'] ?? ($motifs[$type] ?? null);
                     if ($motif) { $attrs .= ' pattern="' . e($motif) . '"'; } ?>
                     <label><span class="<?= $classeLib ?>"><?= e($lib) ?></span><input type="<?= $html ?>" name="<?= $nom ?>" value="<?= e($val) ?>" <?= $req ?> <?= $attrs ?>></label>
                 <?php endif; ?>
@@ -178,8 +192,12 @@ if ($edition && $ecriture) {
 $where = ['1 = 1'];
 $params = [];
 if (($q = filtre('q')) !== '') {
-    $where[] = '(' . implode(' OR ', array_map(fn($c) => "$c LIKE ?", $ref['recherche'])) . ')';
-    foreach ($ref['recherche'] as $_) { $params[] = "%$q%"; }
+    $ou = [];
+    foreach ($ref['recherche'] as $c) {
+        $ou[] = "$c LIKE ?";
+        $params[] = "%$q%";
+    }
+    $where[] = '(' . implode(' OR ', $ou) . ')';
 }
 foreach ($ref['filtres'] ?? [] as $nom) {
     if (($v = filtre($nom)) !== '') { $where[] = "t.`$nom` = ?"; $params[] = $v; }
@@ -191,7 +209,7 @@ $elements = lignes("$sql ORDER BY {$ref['liste']['ordre']} LIMIT $limite OFFSET 
 $colonnes = $ref['liste']['colonnes'];
 
 /** Mise en forme d'une valeur de cellule selon le type du champ d'origine. */
-function cellule(array $champs, string $col, mixed $val): string
+function cellule(array $champs, string $col, $val): string
 {
     $type = $champs[$col][1] ?? '';
     if ($type === 'booleen') { return $val ? '<span class="pastille bleu">Oui</span>' : '<span class="discret">Non</span>'; }
@@ -201,7 +219,10 @@ function cellule(array $champs, string $col, mixed $val): string
     return e($val);
 }
 
-$onglets = array_filter($refs, fn($r) => $r['groupe'] === $ref['groupe'] && a_profil(...$r['lecture']));
+$onglets = [];     // autres référentiels du même groupe, accessibles à ce profil
+foreach ($refs as $k => $r) {
+    if ($r['groupe'] === $ref['groupe'] && profil_parmi($r['lecture'])) { $onglets[$k] = $r; }
+}
 entete($ref['titre'], 'referentiel.php?t=' . $cle);
 ?>
 <?php if (count($onglets) > 1): ?>

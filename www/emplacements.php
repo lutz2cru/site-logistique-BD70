@@ -52,9 +52,13 @@ entete('Emplacements et remplissage');
     <h2>
         <form method="get" class="actions">
             Allée <select name="allee" onchange="this.form.submit()">
-                <?php foreach ($zones as $z): ?>
+                <?php foreach ($zones as $z):
+                    $alleesZone = [];                    // allées de cette zone : id => code
+                    foreach ($allees as $a) {
+                        if ($a['zone_id'] === $z['id']) { $alleesZone[$a['id']] = $a['code']; }
+                    } ?>
                 <optgroup label="<?= e($z['libelle']) ?>">
-                    <?= options(array_column(array_filter($allees, fn($a) => $a['zone_id'] === $z['id']), 'code', 'id'), $alleeId) ?>
+                    <?= options($alleesZone, $alleeId) ?>
                 </optgroup>
                 <?php endforeach; ?>
             </select>

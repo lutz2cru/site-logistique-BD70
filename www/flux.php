@@ -92,11 +92,26 @@ $attendus = lignes("SELECT r.id, r.numero, r.debut, r.sens, q.numero AS quai, v.
 /** Quais proposés pour un camion : libres, compatibles avec son véhicule et son sens ; celui du RDV en premier. */
 function quais_proposes(array $p, array $quaisLibres): array
 {
-    $ok = array_filter($quaisLibres, fn($q) => in_array((string) $p['type_vehicule_id'], explode(',', $q['types']), true)
-                                            && in_array($q['type'], [$p['sens'], 'mixte'], true));
-    usort($ok, fn($a, $b) => [$b['id'] === $p['rdv_quai_id'], $a['type'] === 'mixte', $a['numero']]
-                         <=> [$a['id'] === $p['rdv_quai_id'], $b['type'] === 'mixte', $b['numero']]);
-    return $ok;
+    $quaiRdv = [];       // le quai prévu au rendez-vous, s'il est libre
+    $dedies = [];        // quais du même sens que le camion (réception ou expédition)
+    $mixtes = [];        // quais mixtes, proposés en dernier
+    foreach ($quaisLibres as $q) {
+        $vehiculeAccepte = in_array((string) $p['type_vehicule_id'], explode(',', $q['types']), true);
+        if (!$vehiculeAccepte || ($q['type'] !== $p['sens'] && $q['type'] !== 'mixte')) { continue; }
+        if ($q['id'] === $p['rdv_quai_id']) { $quaiRdv[] = $q; }
+        elseif ($q['type'] === 'mixte') { $mixtes[] = $q; }
+        else { $dedies[] = $q; }
+    }
+    // les quais libres arrivent déjà triés par numéro (ORDER BY q.numero)
+    return array_merge($quaiRdv, $dedies, $mixtes);
+}
+
+/** Petit formulaire d'un bouton faisant passer le camion à l'étape $code. */
+function bouton_etape(array $p, string $code, string $lib, string $classe = '', string $extra = ''): string
+{
+    return '<form method="post" style="display:inline-flex;gap:4px;align-items:center">' . champ_csrf()
+         . '<input type="hidden" name="passage_id" value="' . $p['id'] . '"><input type="hidden" name="etape" value="' . $code . '">'
+         . $extra . '<button class="petit ' . $classe . '">' . e($lib) . '</button></form> ';
 }
 
 entete('Camions sur site');
@@ -125,22 +140,17 @@ entete('Camions sur site');
             <td><?= e($p['quai']) ?></td>
             <td>
                 <?php
-                $form =fn(string $code, string $lib, string $classe = '', string $extra = '') =>
-                    '<form method="post" style="display:inline-flex;gap:4px;align-items:center">' . champ_csrf()
-                    . '<input type="hidden" name="passage_id" value="' . $p['id'] . '"><input type="hidden" name="etape" value="' . $code . '">'
-                    . $extra . '<button class="petit ' . $classe . '">' . e($lib) . '</button></form> ';
-
                 if (in_array($p['etape'], ['ARRIVEE', 'CONTROLE', 'PARKING'], true)) {
                     if (!$peutAgir) { echo '<small>en attente du poste de garde</small>'; }
                     else {
-                        if ($p['etape'] === 'ARRIVEE') { echo $form('CONTROLE', 'Documents contrôlés'); }
-                        if ($p['etape'] === 'CONTROLE') { echo $form('PARKING', 'Mettre en attente', 'discret'); }
+                        if ($p['etape'] === 'ARRIVEE') { echo bouton_etape($p, 'CONTROLE', 'Documents contrôlés'); }
+                        if ($p['etape'] === 'CONTROLE') { echo bouton_etape($p, 'PARKING', 'Mettre en attente', 'discret'); }
                         $proposes = quais_proposes($p, $quaisLibres);
                         if ($p['etape'] === 'ARRIVEE') {
                             // les documents doivent être contrôlés avant l'appel à quai
                         } elseif ($proposes) {
                             $select = '<select name="quai_id" style="padding:2px 4px">' . options(array_column($proposes, 'numero', 'id')) . '</select>';
-                            echo $form('APPEL_QUAI', 'Appeler à quai', 'secondaire', $select);
+                            echo bouton_etape($p, 'APPEL_QUAI', 'Appeler à quai', 'secondaire', $select);
                         } else {
                             echo '<small class="retard">aucun quai compatible libre</small>';
                         }
@@ -150,7 +160,7 @@ entete('Camions sur site');
                     if (!$peutCharger) {
                         echo "<small>$operation à quai, géré par le magasinier</small>";
                     } elseif ($p['etape'] === 'APPEL_QUAI') {
-                        echo $form('DEBUT_OP', "Début $operation");
+                        echo bouton_etape($p, 'DEBUT_OP', "Début $operation");
                     } else {
                         if ($p['sens'] === 'expedition') {
                             echo '<a class="bouton petit secondaire" href="expedition.php?passage=' . $p['id'] . '">Charger le camion</a> ';
@@ -159,10 +169,10 @@ entete('Camions sur site');
                                 ? '<a class="bouton petit secondaire" href="reception.php?id=' . $p['reception_id'] . '">Réception</a> '
                                 : '<a class="bouton petit secondaire" href="receptions.php">Démarrer la réception</a> ';
                         }
-                        echo $form('FIN_OP', "Fin $operation");
+                        echo bouton_etape($p, 'FIN_OP', "Fin $operation");
                     }
                 } elseif ($p['etape'] === 'FIN_OP' && $peutAgir) {
-                    echo $form('DEPART', 'Départ du site', '', '');
+                    echo bouton_etape($p, 'DEPART', 'Départ du site', '', '');
                 }
                 ?>
             </td>

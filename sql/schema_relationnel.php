@@ -5,8 +5,6 @@
  *
  *   php sql/schema_relationnel.php
  */
-declare(strict_types=1);
-
 $host = getopt('', ['host::'])['host'] ?? 'localhost';
 $pdo = new PDO("mysql:host=$host;dbname=information_schema;charset=utf8mb4", 'root', '', [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -43,12 +41,13 @@ foreach ($tables as $t) {
         $attrs[] = $txt;
     }
     $md .= "- **$t** (" . implode(', ', $attrs) . ")\n";
-    $refs = array_map(fn($col, $ref) => "`$col` → $ref", array_keys($fk[$t] ?? []), $fk[$t] ?? []);
+    $refs = [];
+    foreach ($fk[$t] ?? [] as $col => $ref) { $refs[] = "`$col` → $ref"; }
     if ($refs) { $md .= "  - références : " . implode(', ', $refs) . "\n"; }
     if (count($pk[$t] ?? []) > 1) { $jonctions[] = $t; }
 }
 $md .= "\n## Tables de jointure (associations N:N)\n\n";
-$md .= "Clé primaire composée des clés étrangères : " . implode(', ', array_map(fn($t) => "`$t`", $jonctions)) . ".\n";
+$md .= "Clé primaire composée des clés étrangères : " . '`' . implode('`, `', $jonctions) . '`' . ".\n";
 $md .= "\n## Remarques de normalisation (3FN)\n\n";
 $md .= "- Chaque attribut non clé dépend de toute la clé et uniquement d'elle ; les libellés répétitifs (profils, types de véhicule, étapes, conditions de stockage, équipements, habilitations) sont isolés dans des tables de référence.\n";
 $md .= "- Les coordonnées (adresse, code postal, ville) sont stockées telles qu'imprimées sur les documents ; la ville n'est pas déduite du code postal (plusieurs communes partagent un même code).\n";

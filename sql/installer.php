@@ -15,8 +15,6 @@
  * (voir README.md).
  */
 
-declare(strict_types=1);
-
 if (PHP_SAPI !== 'cli') {
     exit("Ce script s'exécute en ligne de commande : php sql/installer.php\n");
 }
@@ -73,7 +71,7 @@ $pdo->exec('USE entrepot');
 // ---------------------------------------------------------------------
 //  Utilitaires
 // ---------------------------------------------------------------------
-function alea(array $t): mixed { return $t[array_rand($t)]; }
+function alea(array $t) { return $t[array_rand($t)]; }
 function proba(float $p): bool { return mt_rand() / mt_getrandmax() < $p; }
 function entre(int $a, int $b): int { return mt_rand($a, $b); }
 
@@ -91,7 +89,12 @@ function inserer(PDO $pdo, string $table, array $ligne): int
 }
 
 function siret(): string { return (string) entre(100, 999) . str_pad((string) entre(0, 99999999999), 11, '0', STR_PAD_LEFT); }
-function telephone(): string { return '0' . entre(1, 7) . ' ' . implode(' ', array_map(fn() => sprintf('%02d', entre(0, 99)), range(1, 4))); }
+function telephone(): string
+{
+    $numero = '0' . entre(1, 7);
+    for ($i = 0; $i < 4; $i++) { $numero .= ' ' . sprintf('%02d', entre(0, 99)); }
+    return $numero;
+}
 function dt(DateTimeImmutable $d): string { return $d->format('Y-m-d H:i:s'); }
 function plusMin(DateTimeImmutable $d, int $min): DateTimeImmutable { return $d->modify(($min >= 0 ? '+' : '') . $min . ' minutes'); }
 
@@ -238,7 +241,9 @@ for ($i = 1; $i <= 16; $i++) {
     $qid = inserer($pdo, 'quai', ['numero' => sprintf('Q%02d', $i), 'type' => $type]);
     foreach ($equip as $e) { inserer($pdo, 'quai_equipement', ['quai_id' => $qid, 'equipement_id' => $equipId[$e]]); }
     foreach ($accepte as $t) { inserer($pdo, 'quai_type_vehicule', ['quai_id' => $qid, 'type_vehicule_id' => $typeVehId[$t]]); }
-    $quais[$qid] = ['type' => $type, 'types_veh' => array_map(fn($t) => $typeVehId[$t], $accepte), 'numero' => sprintf('Q%02d', $i)];
+    $typesVeh = [];
+    foreach ($accepte as $t) { $typesVeh[] = $typeVehId[$t]; }
+    $quais[$qid] = ['type' => $type, 'types_veh' => $typesVeh, 'numero' => sprintf('Q%02d', $i)];
 }
 $quaiHorsService = array_key_last($quais) - 4;   // Q12 : mis hors service à la fin de la simulation
 
@@ -301,9 +306,9 @@ foreach ($nomsTransporteurs as $idx => $nom) {
             $immat = sprintf('%s-%03d-%s', chr(entre(65, 90)) . chr(entre(65, 90)), entre(1, 999), chr(entre(65, 90)) . chr(entre(65, 90)));
         } while (isset($immatUtilisees[$immat]));
         $immatUtilisees[$immat] = true;
-        [$poids, $pal] = match ($type) {
-            'Semi-remorque' => [25000, 33], 'Porteur 19 t' => [10000, 18], 'Porteur 12 t' => [6000, 14], 'Fourgon' => [1200, 4],
-        };
+        // charge maximale (kg) et nombre de palettes selon le type de véhicule
+        $capacites = ['Semi-remorque' => [25000, 33], 'Porteur 19 t' => [10000, 18], 'Porteur 12 t' => [6000, 14], 'Fourgon' => [1200, 4]];
+        [$poids, $pal] = $capacites[$type];
         $vid = inserer($pdo, 'vehicule', [
             'immatriculation' => $immat, 'transporteur_id' => $tid, 'type_vehicule_id' => $typeVehId[$type],
             'poids_max_kg' => $poids, 'palettes_max' => $pal, 'frigorifique' => (int) proba(0.25),
@@ -430,7 +435,8 @@ foreach ($catalogues as $nomClient => $parCondition) {
 $articlesParFournisseur = [];
 $idsArticles = array_keys($articles);
 foreach ($fournisseurs as $f) {
-    $articlesParFournisseur[$f] = array_map(fn($k) => $idsArticles[$k], (array) array_rand($idsArticles, 25));
+    $articlesParFournisseur[$f] = [];
+    foreach ((array) array_rand($idsArticles, 25) as $k) { $articlesParFournisseur[$f][] = $idsArticles[$k]; }
 }
 $pdo->commit();
 
@@ -530,9 +536,11 @@ function deroulerPassage(PDOStatement $etape, PDOStatement $majQuai, array $etap
 function TIMESTAMPDIFF_MIN(DateTimeImmutable $a, DateTimeImmutable $b): int { return (int) (($b->getTimestamp() - $a->getTimestamp()) / 60); }
 
 /** Réception complète d'un camion entrant (avis, lots, écarts, rangement). */
-function simulerReception(PDO $pdo, array $ctx, int $passageId, array $t, bool $cloturer): void
+function simulerReception(PDO $pdo, int $passageId, array $t, bool $cloturer): void
 {
-    extract($ctx, EXTR_REFS);
+    // variables de la simulation, définies dans le programme principal et partagées avec cette fonction
+    global $articles, $articlesParFournisseur, $fournisseurs, $utilisateurs, $emplacements, $zoneConditions,
+           $lotArticle, $stockParArticle, $mvt, $lotsEntree, $compteurs, $rues, $villes, $capaciteTotale;
     $fournisseur = alea($fournisseurs);
     $avisId = null;
     $lignes = [];
@@ -560,15 +568,14 @@ function simulerReception(PDO $pdo, array $ctx, int $passageId, array $t, bool $
         for ($k = 0; $k < $nbLots; $k++) {
             $q = $k === $nbLots - 1 ? $reste : intdiv($recu, 2);
             $reste -= $q;
-            $dlc = match ($articles[$a]['cond']) {
-                'Froid positif' => $t['ARRIVEE']->modify('+' . entre(12, 40) . ' days'),
-                'Surgelé'       => $t['ARRIVEE']->modify('+' . entre(150, 400) . ' days'),
-                'Ambiant'       => proba(0.5) ? $t['ARRIVEE']->modify('+' . entre(60, 500) . ' days') : null,
-                default         => null,
-            };
+            // date limite selon la condition de stockage (pas toujours renseignée pour l'ambiant)
+            $dlc = null;
+            if ($articles[$a]['cond'] === 'Froid positif') { $dlc = $t['ARRIVEE']->modify('+' . entre(12, 40) . ' days'); }
+            elseif ($articles[$a]['cond'] === 'Surgelé') { $dlc = $t['ARRIVEE']->modify('+' . entre(150, 400) . ' days'); }
+            elseif ($articles[$a]['cond'] === 'Ambiant' && proba(0.5)) { $dlc = $t['ARRIVEE']->modify('+' . entre(60, 500) . ' days'); }
             $lotId = inserer($pdo, 'lot', ['article_id' => $a, 'numero_lot_fournisseur' => 'F' . entre(100000, 999999),
                 'date_fabrication' => $t['ARRIVEE']->modify('-' . entre(2, 30) . ' days')->format('Y-m-d'),
-                'date_limite_conso' => $dlc?->format('Y-m-d')]);
+                'date_limite_conso' => $dlc === null ? null : $dlc->format('Y-m-d')]);
             $lotArticle[$lotId] = $a;
             $etat = proba(0.04) ? 'endommage' : 'bon';
             inserer($pdo, 'reception_lot', ['reception_id' => $recId, 'lot_id' => $lotId, 'quantite_recue' => $q, 'etat_palette' => $etat]);
@@ -595,7 +602,10 @@ function simulerReception(PDO $pdo, array $ctx, int $passageId, array $t, bool $
         // réserve émise auprès du transporteur en cas de casse, et pour une partie des manquants
         $types = $pdo->query("SELECT te.code FROM constat_ecart ce JOIN type_ecart te ON te.id = ce.type_ecart_id
                                WHERE ce.reception_id = $recId")->fetchAll(PDO::FETCH_COLUMN);
-        $aReserver = array_filter($types, fn($c) => $c === 'endommage' || ($c === 'manquant' && proba(0.5)));
+        $aReserver = [];
+        foreach ($types as $c) {
+            if ($c === 'endommage' || ($c === 'manquant' && proba(0.5))) { $aReserver[] = $c; }
+        }
         if ($aReserver) {
             inserer($pdo, 'reserve', ['reception_id' => $recId, 'date_emission' => dt($t['FIN_OP']),
                 'motif' => count($aReserver) > 1 ? 'Colis manquants et/ou endommagés à la livraison' : 'Réserve sur l\'état de la marchandise',
@@ -606,12 +616,19 @@ function simulerReception(PDO $pdo, array $ctx, int $passageId, array $t, bool $
 }
 
 /** Commandes chargées par un camion sortant : prélèvement FEFO/FIFO par la procédure stockée puis chargement. */
-function simulerExpedition(PDO $pdo, array $ctx, int $passageId, array $t, bool $charger, bool $parti = true): void
+function simulerExpedition(PDO $pdo, int $passageId, array $t, bool $charger, bool $parti = true): void
 {
-    extract($ctx, EXTR_REFS);
-    $enStock = array_keys(array_filter($stockParArticle, fn($q) => $q > 0));
+    // variables de la simulation, définies dans le programme principal et partagées avec cette fonction
+    global $articles, $articlesParFournisseur, $fournisseurs, $utilisateurs, $emplacements, $zoneConditions,
+           $lotArticle, $stockParArticle, $mvt, $lotsEntree, $compteurs, $rues, $villes, $capaciteTotale;
+    $enStock = [];      // articles ayant du stock
+    foreach ($stockParArticle as $a => $q) {
+        if ($q > 0) { $enStock[] = $a; }
+    }
     if (!$enStock) { return; }
-    $taux = array_sum(array_map(fn($e) => $e['cap'] - libres($e, $articles, $lotArticle), $emplacements)) / $capaciteTotale;
+    $occupe = 0;        // taux de remplissage de l'entrepôt
+    foreach ($emplacements as $e) { $occupe += $e['cap'] - libres($e, $articles, $lotArticle); }
+    $taux = $occupe / $capaciteTotale;
     $commandes = [];
     for ($c = 0, $n = entre(1, 3); $c < $n; $c++) {
         // un client ne commande que ses propres articles
@@ -693,14 +710,22 @@ function simulerExpedition(PDO $pdo, array $ctx, int $passageId, array $t, bool 
     inserer($pdo, 'document_transport', ['expedition_id' => $expId, 'type' => 'CMR', 'date_emission' => dt($t['FIN_OP'])]);
 }
 
-$ctx = [
-    'articles' => &$articles, 'articlesParFournisseur' => $articlesParFournisseur, 'fournisseurs' => $fournisseurs,
-    'utilisateurs' => $utilisateurs, 'emplacements' => &$emplacements, 'zoneConditions' => $zoneConditions,
-    'lotArticle' => &$lotArticle, 'stockParArticle' => &$stockParArticle, 'mvt' => $mvt, 'lotsEntree' => &$lotsEntree,
-    'compteurs' => &$compteurs, 'clients' => $clients, 'rues' => $rues, 'villes' => $villes, 'capaciteTotale' => $capaciteTotale,
-];
+/** Date ramenée à la minute (sans secondes). */
+function sansSecondes(DateTimeImmutable $d): DateTimeImmutable
+{
+    return $d->setTime((int) $d->format('H'), (int) $d->format('i'));
+}
 
-$sansMs = fn(DateTimeImmutable $d) => $d->setTime((int) $d->format('H'), (int) $d->format('i'));
+/** Ordre de traitement des événements d'une journée : camions déjà repartis d'abord, expéditions avant réceptions, puis par heure. */
+function comparerEvenements(array $a, array $b): int
+{
+    if ($a['enCours'] !== $b['enCours']) { return $a['enCours'] ? 1 : -1; }
+    $aExp = $a['sens'] === 'expedition';
+    $bExp = $b['sens'] === 'expedition';
+    if ($aExp !== $bExp) { return $aExp ? -1 : 1; }
+    if ($a['debut'] == $b['debut']) { return 0; }
+    return $a['debut'] < $b['debut'] ? -1 : 1;
+}
 $occupesCreneau = [];   // "v<id>@<créneau>" : véhicule déjà attendu sur ce créneau
 $surSite = [];          // véhicules / chauffeurs actuellement sur le site
 for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
@@ -730,7 +755,7 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
     }
     // Les expéditions du jour sont préparées le matin sur le stock de la veille : on les traite
     // d'abord. Les camions encore sur site sont traités en dernier (ils occupent leur quai).
-    usort($evenements, fn($a, $b) => [$a['enCours'], $a['sens'] !== 'expedition', $a['debut']] <=> [$b['enCours'], $b['sens'] !== 'expedition', $b['debut']]);
+    usort($evenements, 'comparerEvenements');
 
     foreach ($evenements as $ev) {
         $qid = $ev['quai'];
@@ -739,7 +764,10 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
         $cleCreneau = $ev['debut']->format('YmdHi');
         for ($essai = 0; $essai < 20; $essai++) {
             $typeVeh = alea($quais[$qid]['types_veh']);
-            $candidatsT = array_keys(array_filter($transporteurs, fn($t) => !empty($t['vehicules'][$typeVeh])));
+            $candidatsT = [];   // transporteurs possédant ce type de véhicule
+            foreach ($transporteurs as $idT => $tr) {
+                if (!empty($tr['vehicules'][$typeVeh])) { $candidatsT[] = $idT; }
+            }
             $tid = alea($candidatsT);
             $vid = alea($transporteurs[$tid]['vehicules'][$typeVeh]);
             $chid = alea($transporteurs[$tid]['chauffeurs']);
@@ -766,7 +794,7 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
         }
 
         $retard = (int) (entre(-25, 30) * $ponct + (proba(0.1 * $ponct) ? entre(15, 90) : 0));
-        $arrivee = $sansMs(plusMin($ev['debut'], $ev['rdv'] ? $retard : 0));
+        $arrivee = sansSecondes(plusMin($ev['debut'], $ev['rdv'] ? $retard : 0));
         if ($enCours && $arrivee > $maintenant) { $arrivee = plusMin($maintenant, -entre(5, 30)); }
         $pid = inserer($pdo, 'passage', ['rendez_vous_id' => $rdvId, 'vehicule_id' => $vid, 'chauffeur_id' => $chid, 'sens' => $sens,
             'observations' => $ev['rdv'] ? null : 'Arrivée sans rendez-vous']);
@@ -783,21 +811,24 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
         $codes = array_keys($etapes);
         $atteint = $derniere !== null && array_search($derniere, $codes, true) >= array_search('DEBUT_OP', $codes, true);
         if ($sens === 'reception' && $atteint) {
-            simulerReception($pdo, $ctx, $pid, $t, $derniere === 'DEPART');
+            simulerReception($pdo, $pid, $t, $derniere === 'DEPART');
         } elseif ($sens === 'expedition' && $atteint) {
-            simulerExpedition($pdo, $ctx, $pid, $t, $derniere !== 'DEBUT_OP', $derniere === 'DEPART');
+            simulerExpedition($pdo, $pid, $t, $derniere !== 'DEBUT_OP', $derniere === 'DEPART');
         }
     }
 
     // mouvements internes de l'après-midi : transferts et ajustements d'inventaire
     if ($j <= 0 && $jour->format('N') <= 5) {
         $limite = $j === 0 ? $maintenant : $jour->setTime(17, 0);
-        $occupes = array_keys(array_filter($emplacements, fn($e) => !empty($e['occ'])));
+        $occupes = [];      // emplacements non vides
+        foreach ($emplacements as $idE => $e) {
+            if (!empty($e['occ'])) { $occupes[] = $idE; }
+        }
         for ($k = 0, $n = entre(3, 8); $k < $n && $occupes; $k++) {
             $src = alea($occupes);
             if (empty($emplacements[$src]['occ'])) { continue; }   // vidé par un transfert précédent
             $lot = array_rand($emplacements[$src]['occ']);
-            $heure = $sansMs($jour->setTime(13, 0)->modify('+' . entre(0, 240) . ' minutes'));
+            $heure = sansSecondes($jour->setTime(13, 0)->modify('+' . entre(0, 240) . ' minutes'));
             if ($heure > $limite || ($lotsEntree[$lot] ?? $heure) >= $heure) { continue; }
             $q = $emplacements[$src]['occ'][$lot];
             if (proba(0.75)) {
@@ -826,7 +857,7 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
 $pdo->beginTransaction();
 for ($c = 0; $c < 12; $c++) {
     $t = ['ARRIVEE' => $aujourdhui->modify('+' . entre(0, 1) . ' days')->setTime(entre(8, 18), 0)];
-    simulerExpedition($pdo, $ctx, 0, $t, false);
+    simulerExpedition($pdo, 0, $t, false);
 }
 $enAttente = $pdo->query("SELECT id FROM commande WHERE statut = 'recue' ORDER BY id DESC LIMIT 6")->fetchAll(PDO::FETCH_COLUMN);
 foreach ($enAttente as $i => $cmdId) {

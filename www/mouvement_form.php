@@ -76,7 +76,10 @@ $propositions = [];
 if ($type !== 'ajustement') {
     $palettes = max(1, (int) ceil($quantite / $lot['par_palette']));
     $st = requete('CALL proposer_emplacements(?, ?, 8)', [$lot['article_id'], $palettes]);
-    $propositions = array_filter($st->fetchAll(), fn($p) => !$source || (int) $p['id'] !== (int) $source['id']);
+    foreach ($st->fetchAll() as $p) {
+        // on ne propose pas l'emplacement de départ d'un transfert
+        if (!$source || (int) $p['id'] !== (int) $source['id']) { $propositions[] = $p; }
+    }
     $st->closeCursor();
 }
 

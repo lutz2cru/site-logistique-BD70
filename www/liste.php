@@ -66,8 +66,14 @@ $lignes = lignes('SELECT lp.*, e.code AS emplacement, l.code_lot, l.date_limite_
                     JOIN emplacement e ON e.id = lp.emplacement_id JOIN lot l ON l.id = lp.lot_id JOIN article ar ON ar.id = l.article_id
                     LEFT JOIN stock s ON s.lot_id = lp.lot_id AND s.emplacement_id = lp.emplacement_id
                    WHERE lp.liste_id = ? ORDER BY lp.ordre', [$id]);
-$restantes = count(array_filter($lignes, fn($l) => $l['quantite_prelevee'] === null));
-$suivante = $restantes ? array_values(array_filter($lignes, fn($l) => $l['quantite_prelevee'] === null))[0]['ordre'] : null;
+$restantes = 0;          // lignes pas encore prélevées
+$suivante = null;       // ordre de la prochaine ligne à prélever
+foreach ($lignes as $l) {
+    if ($l['quantite_prelevee'] === null) {
+        $restantes++;
+        if ($suivante === null) { $suivante = $l['ordre']; }
+    }
+}
 
 entete("Liste {$liste['numero']}", a_profil('magasinier') ? 'listes.php' : 'preparation.php');
 ?>

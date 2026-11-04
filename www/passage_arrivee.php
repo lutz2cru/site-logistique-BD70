@@ -31,8 +31,14 @@ if (est_post()) {
     foreach ($v as $k => $_) { $v[$k] = trim((string) ($_POST[$k] ?? '')); }
     if ($rdv) { $v['vehicule_id'] = $rdv['vehicule_id']; $v['sens'] = $rdv['sens']; }
 
-    $veh = array_values(array_filter($vehicules, fn($x) => (string) $x['id'] === $v['vehicule_id']))[0] ?? null;
-    $ch = array_values(array_filter($chauffeurs, fn($x) => (string) $x['id'] === $v['chauffeur_id']))[0] ?? null;
+    $veh = null;            // véhicule et chauffeur choisis, retrouvés dans les listes proposées
+    foreach ($vehicules as $x) {
+        if ((string) $x['id'] === $v['vehicule_id']) { $veh = $x; }
+    }
+    $ch = null;
+    foreach ($chauffeurs as $x) {
+        if ((string) $x['id'] === $v['chauffeur_id']) { $ch = $x; }
+    }
     if (!$veh) { $erreurs[] = 'Choisissez le véhicule.'; }
     if (!$ch) { $erreurs[] = 'Choisissez le chauffeur.'; }
     if ($veh && $ch && $veh['transporteur_id'] !== $ch['transporteur_id']) { $erreurs[] = 'Le chauffeur n\'appartient pas au transporteur du véhicule.'; }

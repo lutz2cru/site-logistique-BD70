@@ -40,12 +40,12 @@ if (est_post()) {
             } else {
                 $ph = implode(',', array_fill(0, count($ids), '?'));
                 $charge = ligne("SELECT COALESCE(SUM(type = 'palette'), 0) AS palettes, COALESCE(SUM(poids_kg), 0) AS poids FROM unite_expedition
-                                  WHERE expedition_id = ? OR (expedition_id IS NULL AND id IN ($ph))", [$id, ...$ids]);
+                                  WHERE expedition_id = ? OR (expedition_id IS NULL AND id IN ($ph))", array_merge([$id], $ids));
                 if ($charge['palettes'] > $p['palettes_max']) { $erreurs[] = "Le camion accepte {$p['palettes_max']} palettes au maximum."; }
                 if ($charge['poids'] > $p['poids_max_kg']) { $erreurs[] = 'Le camion accepte ' . nombre($p['poids_max_kg']) . ' kg au maximum.'; }
                 if (!$erreurs) {
                     requete("UPDATE unite_expedition ue JOIN commande c ON c.id = ue.commande_id SET ue.expedition_id = ?
-                              WHERE ue.expedition_id IS NULL AND c.statut = 'preparee' AND ue.id IN ($ph)", [$id, ...$ids]);
+                              WHERE ue.expedition_id IS NULL AND c.statut = 'preparee' AND ue.id IN ($ph)", array_merge([$id], $ids));
                     flash('succes', count($ids) . ' unité(s) chargée(s).');
                 }
             }
@@ -82,8 +82,12 @@ $chargees = $exp ? lignes("SELECT $colonnes $jointures WHERE ue.expedition_id = 
 $disponibles = $enChargement ? lignes("SELECT $colonnes $jointures WHERE ue.expedition_id IS NULL AND c.statut = 'preparee'
                                        ORDER BY c.expedition_souhaitee, c.numero, ue.id") : [];
 $documents = $exp ? lignes('SELECT id, numero, type, date_emission FROM document_transport WHERE expedition_id = ? ORDER BY type, id', [$id]) : [];
-$palettes = count(array_filter($chargees, fn($u) => $u['type'] === 'palette'));
-$poids = array_sum(array_column($chargees, 'poids_kg'));
+$palettes = 0;                                   // charge actuelle du camion
+$poids = 0;
+foreach ($chargees as $u) {
+    if ($u['type'] === 'palette') { $palettes++; }
+    $poids += $u['poids_kg'];
+}
 
 entete($exp ? "Expédition {$exp['numero']}" : "Chargement — {$p['immatriculation']}", 'expeditions.php');
 ?>

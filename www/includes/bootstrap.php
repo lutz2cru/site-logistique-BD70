@@ -2,17 +2,17 @@
 /**
  * Chargé en tête de chaque page : session, connexion PDO, fonctions utilitaires.
  */
-declare(strict_types=1);
-
 date_default_timezone_set('Europe/Paris');
 
 // aucune erreur technique (chemin, requête) n'est montrée à l'utilisateur : elle part dans le journal PHP
 ini_set('display_errors', '0');
-set_exception_handler(function (Throwable $e): void {
+function erreur_non_prevue($e)
+{
     error_log((string) $e);
     if (!headers_sent()) { http_response_code(500); }
     echo '<p>Une erreur est survenue. Revenez à la <a href="index.php">page d\'accueil</a> et réessayez.</p>';
-});
+}
+set_exception_handler('erreur_non_prevue');
 
 session_set_cookie_params(['httponly' => true, 'samesite' => 'Lax']);
 session_start();
@@ -44,21 +44,23 @@ function requete(string $sql, array $params = []): PDOStatement
 
 function lignes(string $sql, array $params = []): array { return requete($sql, $params)->fetchAll(); }
 function ligne(string $sql, array $params = []): ?array { return requete($sql, $params)->fetch() ?: null; }
-function valeur(string $sql, array $params = []): mixed { return requete($sql, $params)->fetchColumn(); }
+function valeur(string $sql, array $params = []) { return requete($sql, $params)->fetchColumn(); }
 
 /** Message lisible à partir d'une erreur SQL (contrôles des déclencheurs, contraintes). */
 function message_erreur(PDOException $e): string
 {
     $info = $e->errorInfo ?? [];
+    $etat = $info[0] ?? '';
     $code = (int) ($info[1] ?? 0);
-    return match (true) {
-        ($info[0] ?? '') === '45000' => $info[2],                                 // SIGNAL d'un déclencheur
-        $code === 1062 => 'Cette valeur existe déjà (doublon sur un identifiant unique).',
-        $code === 1451 => 'Suppression impossible : cet élément est utilisé par d\'autres données.',
-        $code === 1452 => 'Référence invalide vers un autre élément.',
-        $code === 4025 => 'Une contrainte de cohérence n\'est pas respectée (' . ($info[2] ?? '') . ').',
-        default => 'Erreur de base de données : ' . ($info[2] ?? $e->getMessage()),
-    };
+    $texte = $info[2] ?? $e->getMessage();
+    if ($etat === '45000') {                 // erreur levée par SIGNAL dans un déclencheur : message déjà rédigé
+        return $texte;
+    }
+    if ($code === 1062) { return 'Cette valeur existe déjà (doublon sur un identifiant unique).'; }
+    if ($code === 1451) { return 'Suppression impossible : cet élément est utilisé par d\'autres données.'; }
+    if ($code === 1452) { return 'Référence invalide vers un autre élément.'; }
+    if ($code === 4025) { return 'Une contrainte de cohérence n\'est pas respectée (' . $texte . ').'; }
+    return 'Erreur de base de données : ' . $texte;
 }
 
 // ---------------------------------------------------------------------
@@ -67,6 +69,12 @@ function message_erreur(PDOException $e): string
 function utilisateur(): ?array { return $_SESSION['utilisateur'] ?? null; }
 
 function a_profil(string ...$profils): bool
+{
+    return profil_parmi($profils);
+}
+
+/** Vrai si l'utilisateur connecté a l'un des profils de la liste. */
+function profil_parmi(array $profils): bool
 {
     $u = utilisateur();
     if ($u === null) { return false; }
@@ -96,8 +104,14 @@ function exiger_connexion(): array
 
 function exiger_profil(string ...$profils): array
 {
+    return exiger_profil_parmi($profils);
+}
+
+/** Refuse l'accès à la page si l'utilisateur n'a aucun des profils de la liste. */
+function exiger_profil_parmi(array $profils): array
+{
     $u = exiger_connexion();
-    if (!a_profil(...$profils)) {
+    if (!profil_parmi($profils)) {
         http_response_code(403);
         flash('erreur', 'Vous n\'avez pas accès à cette page.');
         rediriger('index.php');
@@ -110,7 +124,10 @@ function exiger_profil(string ...$profils): array
 // ---------------------------------------------------------------------
 function jeton_csrf(): string
 {
-    return $_SESSION['csrf'] ??= bin2hex(random_bytes(32));
+    if (!isset($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = bin2hex(random_bytes(32));   // jeton aléatoire, créé une fois par session
+    }
+    return $_SESSION['csrf'];
 }
 
 function champ_csrf(): string
@@ -131,7 +148,7 @@ function est_post(): bool { return $_SERVER['REQUEST_METHOD'] === 'POST'; }
 
 function flash(string $type, string $message): void { $_SESSION['flash'][] = [$type, $message]; }
 
-function rediriger(string $url): never
+function rediriger(string $url): void
 {
     header('Location: ' . $url);
     exit;
@@ -140,12 +157,12 @@ function rediriger(string $url): never
 // ---------------------------------------------------------------------
 //  Affichage
 // ---------------------------------------------------------------------
-function e(mixed $v): string { return htmlspecialchars((string) ($v ?? ''), ENT_QUOTES, 'UTF-8'); }
+function e($v): string { return htmlspecialchars((string) ($v ?? ''), ENT_QUOTES, 'UTF-8'); }
 
 function date_fr(?string $d): string { return $d ? date('d/m/Y', strtotime($d)) : ''; }
 function date_heure_fr(?string $d): string { return $d ? date('d/m/Y H:i', strtotime($d)) : ''; }
 function heure(?string $d): string { return $d ? date('H:i', strtotime($d)) : ''; }
-function nombre(mixed $n, int $dec = 0): string { return $n === null ? '–' : number_format((float) $n, $dec, ',', ' '); }
+function nombre($n, int $dec = 0): string { return $n === null ? '–' : number_format((float) $n, $dec, ',', ' '); }
 
 function duree(?int $minutes): string
 {
@@ -176,7 +193,7 @@ function pastille(?string $statut): string
 }
 
 /** Liste déroulante à partir de paires valeur => libellé. */
-function options(array $paires, mixed $selection = null, ?string $vide = null): string
+function options(array $paires, $selection = null, ?string $vide = null): string
 {
     $html = $vide !== null ? '<option value="">' . e($vide) . '</option>' : '';
     foreach ($paires as $v => $lib) {

@@ -74,7 +74,10 @@ function entete(string $titre, string $actif = ''): void
     <a class="logo" href="index.php">▣ Entrepôt<br><small>Gestion logistique</small></a>
     <nav>
     <?php foreach (menu() as $section => $entrees):
-        $visibles = array_filter($entrees, fn($m) => a_profil(...$m[2]));
+        $visibles = [];                          // entrées du menu autorisées pour ce profil
+        foreach ($entrees as $m) {
+            if (profil_parmi($m[2])) { $visibles[] = $m; }
+        }
         if (!$visibles) { continue; } ?>
         <?php if ($section): ?><div class="section"><?= e($section) ?></div><?php endif; ?>
         <?php foreach ($visibles as [$lib, $url]): ?>

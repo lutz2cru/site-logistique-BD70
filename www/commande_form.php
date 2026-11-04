@@ -99,12 +99,12 @@ if ($modifiable && $client && est_post()) {
             $pdo->beginTransaction();
             $donnees = [$v['expedition_souhaitee'], $v['adresse_livraison'], $v['code_postal'], $v['ville']];
             if ($cmd) {
-                requete('UPDATE commande SET expedition_souhaitee = ?, adresse_livraison = ?, code_postal = ?, ville = ? WHERE id = ?', [...$donnees, $id]);
+                requete('UPDATE commande SET expedition_souhaitee = ?, adresse_livraison = ?, code_postal = ?, ville = ? WHERE id = ?', array_merge($donnees, [$id]));
                 requete('DELETE FROM ligne_commande WHERE commande_id = ?', [$id]);
                 $nid = $id;
             } else {
                 requete("INSERT INTO commande (client_id, date_commande, expedition_souhaitee, adresse_livraison, code_postal, ville)
-                         VALUES (?, CURRENT_DATE, ?, ?, ?, ?)", [$clientId, ...$donnees]);
+                         VALUES (?, CURRENT_DATE, ?, ?, ?, ?)", array_merge([$clientId], $donnees));
                 $nid = (int) $pdo->lastInsertId();
             }
             foreach ($lignesCmd as $art => $q) {
