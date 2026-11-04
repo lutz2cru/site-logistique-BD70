@@ -49,11 +49,11 @@ sql/
   01_schema.sql            modèle relationnel : 45 tables, clés, contraintes CHECK, index
   02_automatisation.sql    fonctions, procédures, déclencheurs, vues
   installer.php            installation + génération des données factices
-  performances.php         mesure des requêtes principales → docs/rapport_performances.md
-  schema_relationnel.php   génère docs/schema_relationnel.md depuis la base
+  performances.php         mesure des requêtes principales (écrit les mesures dans docs/rapport_performances.md)
+  schema_relationnel.php   liste les tables de la base installée (écrit docs/schema_relationnel.md)
 www/                       site web (une page PHP par écran, gabarit commun dans includes/)
-docs/                      rapport de projet, cahier des charges, fiches de cas d'utilisation,
-                           schéma relationnel, rapport de performances
+docs/                      documents Word : rapport de projet, cahier des charges, fiches de cas
+                           d'utilisation, schéma relationnel, rapport de performances
 uml/                       diagramme de cas d'utilisation, diagramme entité-association,
                            schéma relationnel (fichiers SVG)
 sujet/                     énoncé du projet (A26) et grille d'évaluation SI70
