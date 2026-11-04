@@ -230,6 +230,13 @@ BEGIN
     IF v_ordre_nouveau <= v_ordre_courant THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cette étape a déjà été franchie ou précède la dernière étape enregistrée.';
     END IF;
+    -- contrôle et parking peuvent être sautés, pas l'appel à quai ni le début de l'opération
+    IF v_code = 'DEBUT_OP' AND v_ordre_courant <> v_ordre_nouveau - 1 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Le camion doit d''abord être appelé à quai.';
+    END IF;
+    IF v_code = 'FIN_OP' AND v_ordre_courant <> v_ordre_nouveau - 1 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Le (dé)chargement n''a pas commencé.';
+    END IF;
     IF v_derniere IS NOT NULL AND NEW.date_heure < v_derniere THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'L''horodatage doit être postérieur à celui de l''étape précédente.';
     END IF;
