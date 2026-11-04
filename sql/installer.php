@@ -636,6 +636,11 @@ function simulerExpedition(PDO $pdo, array $ctx, int $passageId, array $t, bool 
     if (!$charger) { return; }
 
     $expId = inserer($pdo, 'expedition', ['passage_id' => $passageId, 'date_chargement' => dt($t['DEBUT_OP']), 'statut' => $parti ? 'partie' : 'chargee']);
+    // capacité du camion : une unité qui ne tient plus reste à quai (le déclencheur refuserait le chargement)
+    $camion = $pdo->query("SELECT v.palettes_max, v.poids_max_kg FROM passage p JOIN vehicule v ON v.id = p.vehicule_id WHERE p.id = $passageId")->fetch();
+    $palettesLibres = (int) $camion['palettes_max'];
+    $poidsLibre = (float) $camion['poids_max_kg'];
+    $uniteChargees = 0;
     foreach ($commandes as $cmdId) {
         $regle = proba(0.6) ? 'FEFO' : 'FIFO';
         $pdo->prepare('CALL generer_liste_prelevement(?, ?, @liste)')->execute([$cmdId, $regle]);
@@ -656,15 +661,34 @@ function simulerExpedition(PDO $pdo, array $ctx, int $passageId, array $t, bool 
         $pdo->prepare("UPDATE liste_prelevement SET preparateur_id = ?, date_creation = ?, debut = ?, fin = ?, statut = 'terminee' WHERE id = ?")
             ->execute([$prep, dt(plusMin($debut, -30)), dt($debut), dt(plusMin($heure, 5)), $listeId]);
         // constitution des palettes / colis
+        $chargees = $total = 0;
         foreach (array_chunk($contenu, 2, true) as $groupe) {
             $poids = 0;
             foreach ($groupe as $lot => $q) { $poids += $q * $articles[$lotArticle[$lot]]['poids']; }
+            $type = $poids > 30 ? 'palette' : 'colis';
+            $poidsUnite = max(0.5, round($poids + ($poids > 30 ? 25 : 0.3), 2));
+            $tient = $poidsUnite <= $poidsLibre && ($type === 'colis' || $palettesLibres > 0);
+            if ($tient) {
+                $poidsLibre -= $poidsUnite;
+                $palettesLibres -= (int) ($type === 'palette');
+                $chargees++;
+            }
+            $total++;
             $ueId = inserer($pdo, 'unite_expedition', ['sscc' => '3' . str_pad((string) entre(0, 99999999), 8, '0') . str_pad((string) ($compteurs['commandes'] * 10 + mt_rand(0, 9)), 9, '0', STR_PAD_LEFT),
-                'commande_id' => $cmdId, 'expedition_id' => $expId, 'type' => $poids > 30 ? 'palette' : 'colis', 'poids_kg' => max(0.5, round($poids + ($poids > 30 ? 25 : 0.3), 2))]);
+                'commande_id' => $cmdId, 'expedition_id' => $tient ? $expId : null, 'type' => $type, 'poids_kg' => $poidsUnite]);
             foreach ($groupe as $lot => $q) { inserer($pdo, 'contenu_unite', ['unite_id' => $ueId, 'lot_id' => $lot, 'quantite' => $q]); }
         }
-        $pdo->exec("UPDATE commande SET statut = 'expediee' WHERE id = $cmdId");
-        inserer($pdo, 'document_transport', ['expedition_id' => $expId, 'type' => 'BL', 'date_emission' => dt($t['DEBUT_OP'])]);
+        // une commande n'est expédiée que si toutes ses unités sont parties ; sinon elle attend un autre camion
+        $pdo->exec("UPDATE commande SET statut = '" . ($chargees === $total ? 'expediee' : 'preparee') . "' WHERE id = $cmdId");
+        if ($chargees > 0) {
+            inserer($pdo, 'document_transport', ['expedition_id' => $expId, 'type' => 'BL', 'date_emission' => dt($t['DEBUT_OP'])]);
+        }
+        $uniteChargees += $chargees;
+    }
+    if ($uniteChargees === 0) {
+        // rien n'a pu être chargé : pas d'expédition pour ce camion
+        $pdo->exec("DELETE FROM expedition WHERE id = $expId");
+        return;
     }
     inserer($pdo, 'document_transport', ['expedition_id' => $expId, 'type' => 'CMR', 'date_emission' => dt($t['FIN_OP'])]);
 }

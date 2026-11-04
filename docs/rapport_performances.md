@@ -1,6 +1,6 @@
 # Rapport d'analyse des performances
 
-Mesures réalisées le 04/11/2026 à 14:26 sur MariaDB 10.4.32-MariaDB (poste local), base alimentée par `sql/installer.php`.
+Mesures réalisées le 04/11/2026 à 15:04 sur MariaDB 10.4.32-MariaDB (poste local), base alimentée par `sql/installer.php`.
 Chaque requête est exécutée 20 fois après une exécution de chauffe ; le temps retenu est la **médiane** (en millisecondes, récupération des lignes comprise).
 
 ## Volumétrie
@@ -8,35 +8,35 @@ Chaque requête est exécutée 20 fois après une exécution de chauffe ; le tem
 | Table | Lignes (estimation InnoDB) |
 |---|---:|
 | `passage_etape` | 23 096 |
-| `mouvement_stock` | 16 843 |
-| `ligne_prelevement` | 11 942 |
-| `lot` | 3 918 |
-| `rendez_vous` | 3 671 |
-| `commande` | 3 426 |
-| `passage` | 3 417 |
-| `reception` | 1 698 |
-| `stock` | 731 |
+| `mouvement_stock` | 16 931 |
+| `ligne_prelevement` | 11 991 |
+| `lot` | 3 923 |
+| `rendez_vous` | 3 687 |
+| `commande` | 3 440 |
+| `passage` | 3 426 |
+| `reception` | 1 701 |
+| `stock` | 729 |
 
 ## Requêtes principales
 
 | # | Requête | Temps médian | Sans index | Plan d'exécution |
 |---|---|---:|---:|---|
-| 1 | **Planning d'une journée** — Rendez-vous non annulés du jour, tous quais (planning.php) | 0.40 ms | 2.29 ms (×5.8) | r : index `ix_rdv_debut` (71 l.) ; v : index `PRIMARY` (1 l.) ; t : index `PRIMARY` (1 l.) |
-| 2 | **Contrôle de chevauchement** — Test exécuté par le déclencheur à chaque prise de rendez-vous | 0.14 ms | 1.81 ms (×13.1) | r : index `ix_rdv_quai_creneau` (227 l.) |
-| 3 | **Camions sur site** — Passages dont la dernière étape n'est pas le départ (flux.php) | 2.19 ms | – | v : index `immatriculation` (123 l.) ; p : index `fk_passage_vehicule` (13 l.) ; te : index `PRIMARY` (1 l.) |
-| 4 | **État des quais en temps réel** — Vue v_quai_temps_reel (statut calculé, camion à quai, prochain RDV) | 4.07 ms | – | q : parcours complet (16 l.) ; r : index `ix_rdv_quai_creneau` (114 l.) ; p : index `fk_passage_quai` (106 l.) ; v : index `PRIMARY` (1 l.) |
-| 5 | **Recherche plein texte (1re version)** — MATCH … AGAINST en sous-requête ; comparé à un LIKE '%…%' | 0.60 ms | 3.48 ms (×5.8) | article : index `ft_article_designation` (1 l.) ; ar : index `PRIMARY` (1 l.) ; c : index `PRIMARY` (1 l.) ; l : index `fk_lot_article` (1 l.) |
-| 6 | **Recherche plein texte (version retenue)** — Étape 1 : articles par MATCH … AGAINST (index FULLTEXT) | 0.16 ms | 0.13 ms (×0.8) | article : index `ft_article_designation` (1 l.) |
-| 7 | ↳ Étape 2 : stock des articles trouvés (stock.php) | 0.39 ms | – | ar : index `PRIMARY` (5 l.) ; c : index `PRIMARY` (1 l.) ; l : index `fk_lot_article` (1 l.) ; s : index `ix_stock_lot` (1 l.) |
-| 8 | **Historique d'un lot** — Mouvements d'un lot par ordre chronologique (lot.php) | 0.13 ms | 2.51 ms (×19.1) | mouvement_stock : index `ix_mvt_lot_date` (22 l.) |
-| 9 | **Mouvements des 7 derniers jours** — Historique filtré par date (mouvements.php) | 1.66 ms | 2.67 ms (×1.6) | mouvement_stock : index `ix_mvt_date` (2134 l.) |
-| 10 | **Temps moyens par transporteur (30 j)** — Agrégation de v_passage_durees (indicateurs.php) | 7.64 ms | – | v : index `fk_vehicule_transporteur` (123 l.) ; p : index `fk_passage_vehicule` (13 l.) ; arr : index `PRIMARY` (1 l.) ; appel : index `PRIMARY` (1 l.) |
-| 11 | **Remplissage par zone** — Vue v_remplissage_zone (somme des palettes par zone) | 10.57 ms | – | z : parcours complet (4 l.) ; <derived4> : index `key0` (2 l.) ; <derived3> : index `key0` (2 l.) ; z : index `PRIMARY` (1 l.) |
-| 12 | **Taux d'écart par fournisseur** — Réceptions clôturées sur 30 jours (indicateurs.php) | 4.40 ms | – | f : index `PRIMARY` (30 l.) ; a : index `fk_avis_fournisseur` (1 l.) ; r : index `fk_reception_avis` (1 l.) ; e : index `PRIMARY` (1 l.) |
-| 13 | **Lots proches de la DLC** — Vue v_lots_proches_dlc (index sur la date limite) | 3.19 ms | – | <derived2> : parcours complet (341 l.) ; ar : parcours complet (341 l.) ; l : index `fk_lot_article|ix_lot_dlc` (1 l.) ; s : index `ix_stock_lot` (1 l.) |
-| 14 | **Proposition d'emplacements** — Procédure stockée proposer_emplacements (rangement) | 63.32 ms | – | procédure stockée |
-| 15 | **Stock disponible d'un client** — Stock physique moins lignes réservées (saisie de commande) | 2.73 ms | – | ar : index `fk_article_client` (35 l.) ; l : index `fk_lot_article` (1 l.) ; lp : index `fk_lpr_lot` (1 l.) ; li : index `PRIMARY` (1 l.) |
-| 16 | **Contenu d'une expédition** — Unités chargées et poids par commande (documents de transport) | 0.22 ms | – | ue : index `fk_ue_expedition` (2 l.) ; c : index `PRIMARY` (1 l.) |
+| 1 | **Planning d'une journée** — Rendez-vous non annulés du jour, tous quais (planning.php) | 0.41 ms | 2.36 ms (×5.8) | r : index `ix_rdv_debut` (71 l.) ; v : index `PRIMARY` (1 l.) ; t : index `PRIMARY` (1 l.) |
+| 2 | **Contrôle de chevauchement** — Test exécuté par le déclencheur à chaque prise de rendez-vous | 0.12 ms | 1.74 ms (×14.1) | r : index `ix_rdv_quai_creneau` (225 l.) |
+| 3 | **Camions sur site** — Passages dont la dernière étape n'est pas le départ (flux.php) | 2.10 ms | – | v : index `immatriculation` (123 l.) ; p : index `fk_passage_vehicule` (13 l.) ; te : index `PRIMARY` (1 l.) |
+| 4 | **État des quais en temps réel** — Vue v_quai_temps_reel (statut calculé, camion à quai, prochain RDV) | 4.04 ms | – | q : parcours complet (16 l.) ; r : index `ix_rdv_quai_creneau` (1 l.) ; p : index `fk_passage_quai` (107 l.) ; v : index `PRIMARY` (1 l.) |
+| 5 | **Recherche plein texte (1re version)** — MATCH … AGAINST en sous-requête ; comparé à un LIKE '%…%' | 0.63 ms | 3.39 ms (×5.4) | article : index `ft_article_designation` (1 l.) ; ar : index `PRIMARY` (1 l.) ; c : index `PRIMARY` (1 l.) ; l : index `fk_lot_article` (1 l.) |
+| 6 | **Recherche plein texte (version retenue)** — Étape 1 : articles par MATCH … AGAINST (index FULLTEXT) | 0.14 ms | 0.13 ms (×0.9) | article : index `ft_article_designation` (1 l.) |
+| 7 | ↳ Étape 2 : stock des articles trouvés (stock.php) | 0.38 ms | – | ar : index `PRIMARY` (5 l.) ; c : index `PRIMARY` (1 l.) ; l : index `fk_lot_article` (1 l.) ; s : index `ix_stock_lot` (1 l.) |
+| 8 | **Historique d'un lot** — Mouvements d'un lot par ordre chronologique (lot.php) | 0.36 ms | 2.66 ms (×7.4) | mouvement_stock : index `ix_mvt_lot_date` (22 l.) |
+| 9 | **Mouvements des 7 derniers jours** — Historique filtré par date (mouvements.php) | 1.51 ms | 2.45 ms (×1.6) | mouvement_stock : index `ix_mvt_date` (2183 l.) |
+| 10 | **Temps moyens par transporteur (30 j)** — Agrégation de v_passage_durees (indicateurs.php) | 6.94 ms | – | v : index `fk_vehicule_transporteur` (123 l.) ; p : index `fk_passage_vehicule` (13 l.) ; arr : index `PRIMARY` (1 l.) ; appel : index `PRIMARY` (1 l.) |
+| 11 | **Remplissage par zone** — Vue v_remplissage_zone (somme des palettes par zone) | 8.34 ms | – | z : parcours complet (4 l.) ; <derived4> : index `key0` (2 l.) ; <derived3> : index `key0` (2 l.) ; z : index `PRIMARY` (1 l.) |
+| 12 | **Taux d'écart par fournisseur** — Réceptions clôturées sur 30 jours (indicateurs.php) | 3.50 ms | – | f : index `PRIMARY` (30 l.) ; a : index `fk_avis_fournisseur` (1 l.) ; r : index `fk_reception_avis` (1 l.) ; e : index `PRIMARY` (1 l.) |
+| 13 | **Lots proches de la DLC** — Vue v_lots_proches_dlc (index sur la date limite) | 2.36 ms | – | <derived2> : parcours complet (341 l.) ; ar : parcours complet (341 l.) ; l : index `fk_lot_article|ix_lot_dlc` (1 l.) ; s : index `ix_stock_lot` (1 l.) |
+| 14 | **Proposition d'emplacements** — Procédure stockée proposer_emplacements (rangement) | 52.59 ms | – | procédure stockée |
+| 15 | **Stock disponible d'un client** — Stock physique moins lignes réservées (saisie de commande) | 1.82 ms | – | ar : index `fk_article_client` (35 l.) ; l : index `fk_lot_article` (1 l.) ; lp : index `fk_lpr_lot` (1 l.) ; li : index `PRIMARY` (1 l.) |
+| 16 | **Contenu d'une expédition** — Unités chargées et poids par commande (documents de transport) | 0.17 ms | – | ue : index `fk_ue_expedition` (8 l.) ; c : index `PRIMARY` (1 l.) |
 
 ## Analyse : recherche plein texte
 

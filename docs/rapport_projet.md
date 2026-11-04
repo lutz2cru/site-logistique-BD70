@@ -208,8 +208,8 @@ La base respecte la 1NF : toutes les valeurs sont atomiques et les listes (équi
 
 | Mécanisme | Nombre | Rôle |
 |---|---:|---|
-| Déclencheurs | 18 | Numérotation, contrôles métier, mise à jour du stock et des statuts, immuabilité des mouvements |
-| Procédures | 5 | Contrôle d'un rendez-vous, clôture de réception, génération et clôture de listes, proposition d'emplacements |
+| Déclencheurs | 20 | Numérotation, contrôles métier (créneaux, étapes, capacité des emplacements et des camions), mise à jour du stock et des statuts, immuabilité des mouvements |
+| Procédures | 6 | Contrôle d'un rendez-vous, contrôle du chargement d'un camion, clôture de réception, génération et clôture de listes, proposition d'emplacements |
 | Fonctions | 4 | Palettes occupées, palettes et poids libres, date d'une étape |
 | Vues | 5 | Quais en temps réel, durées des passages, détail du stock, remplissage, dates limites |
 
@@ -231,7 +231,7 @@ Limites connues : le site n'impose pas HTTPS et ne bloque pas les comptes après
 
 Les requêtes principales sont mesurées par `sql/performances.php` ; le détail figure dans `rapport_performances.md`. Toutes s'exécutent en quelques millisecondes sur le jeu de données fourni, à l'exception de la proposition d'emplacements (quelques dizaines de millisecondes), acceptable pour un écran de rangement.
 
-Les index les plus utiles sont l'index composite `ix_rdv_quai_creneau`, qui rend le contrôle de chevauchement environ 12 fois plus rapide, et `ix_mvt_lot_date`, qui rend l'historique d'un lot environ 20 fois plus rapide.
+Les index les plus utiles sont l'index composite `ix_rdv_quai_creneau`, qui rend le contrôle de chevauchement environ 14 fois plus rapide, et `ix_mvt_lot_date`, qui rend l'historique d'un lot environ 7 fois plus rapide.
 
 ## 7. Fonctionnalités réalisées
 
@@ -291,7 +291,7 @@ Les index les plus utiles sont l'index composite `ix_rdv_quai_creneau`, qui rend
 
 **Travail réalisé.** Commandes clients, génération et affectation des listes, prélèvement avec signalement des manquants, colis et palettes avec numéro SSCC, chargement avec contrôle de la capacité du camion, bon de livraison et lettre de voiture imprimables (`commandes.php`, `preparation.php`, `liste.php`, `colisage.php`, `expedition.php`, `document.php`).
 
-**Conclusion.** La chaîne est complète de la commande au départ du camion, qui fait passer la commande à « expédiée ». Cette partie n'était pas exigée dans l'interface.
+**Conclusion.** La chaîne est complète de la commande au départ du camion, qui fait passer la commande à « expédiée ». La capacité du camion (nombre de palettes et poids maximal) est garantie par deux déclencheurs sur les unités d'expédition : une unité qui ne tient plus reste à quai, et sa commande attend un autre camion. Cette partie n'était pas exigée dans l'interface.
 
 ### 7.8 Traçabilité et indicateurs
 
