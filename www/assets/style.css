@@ -131,7 +131,6 @@ input[type=checkbox] { width: 16px; height: 16px; }
 .planning .graduations span { flex: 1; border-left: 1px solid var(--bord); padding-left: 3px; }
 .planning .creneau { position: absolute; top: 5px; bottom: 5px; border-radius: 5px; padding: 2px 6px; font-size: 11px; overflow: hidden; white-space: nowrap; color: #fff; background: var(--bleu); border: 1px solid rgba(0,0,0,.1); }
 .planning .creneau.honore { background: var(--vert); }
-.planning .creneau.absent { background: var(--rouge); }
 .planning .creneau.expedition { background-image: repeating-linear-gradient(45deg, transparent 0 6px, rgba(255,255,255,.15) 6px 12px); }
 .planning .creneau:hover { z-index: 2; overflow: visible; box-shadow: 0 2px 8px rgba(0,0,0,.25); text-decoration: none; }
 .planning .maintenant { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--rouge); z-index: 3; }
@@ -175,18 +174,3 @@ input[type=checkbox] { width: 16px; height: 16px; }
     .carte { border: none; padding: 0; }
     body { background: #fff; }
 }
-
-/* Borne d'accueil en libre-service et écran d'appel du parking */
-.borne .carte { max-width: 560px; }
-.borne input { font-size: 20px; padding: 12px; text-transform: uppercase; }
-.borne button, .borne .bouton { font-size: 18px; padding: 12px 18px; }
-.borne .gros { font-size: 18px; }
-.borne ol { padding-left: 20px; line-height: 1.8; }
-body.ecran-appel { background: #18212f; color: #fff; padding: 24px; font-size: 22px; }
-.ecran-appel header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1f5fbf; margin-bottom: 18px; }
-.ecran-appel h1 { font-size: 32px; } .ecran-appel h2 { font-size: 20px; color: #9db8e6; margin: 18px 0 8px; text-transform: uppercase; }
-.ecran-appel table { width: 100%; border-collapse: collapse; }
-.ecran-appel td { padding: 10px 12px; border-bottom: 1px solid #2c3a50; }
-.ecran-appel .immat { font-family: monospace; font-size: 30px; font-weight: 700; letter-spacing: 2px; }
-.ecran-appel .quai { font-size: 30px; font-weight: 700; color: #7ee2a8; }
-.ecran-appel .discret, .ecran-appel .vide { color: #9aa7bb; }

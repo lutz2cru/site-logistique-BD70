@@ -81,7 +81,7 @@ entete('Rendez-vous');
         <label>Du <input type="date" name="du" value="<?= e($f['du']) ?>"></label>
         <label>Au <input type="date" name="au" value="<?= e($f['au']) ?>"></label>
         <label>Quai <select name="quai"><?= options($quais, $f['quai'], 'Tous') ?></select></label>
-        <label>Statut <select name="statut"><?= options(['planifie' => 'Planifié', 'honore' => 'Honoré', 'annule' => 'Annulé', 'absent' => 'Absent'], $f['statut'], 'Tous') ?></select></label>
+        <label>Statut <select name="statut"><?= options(['planifie' => 'Planifié', 'honore' => 'Honoré', 'annule' => 'Annulé'], $f['statut'], 'Tous') ?></select></label>
         <label>Sens <select name="sens"><?= options(['reception' => 'Réception', 'expedition' => 'Expédition'], $f['sens'], 'Tous') ?></select></label>
         <?php if (!$estTransporteur): ?>
         <label>Transporteur <select name="transporteur"><?= options($transporteurs, $f['transporteur'], 'Tous') ?></select></label>
@@ -117,8 +117,6 @@ entete('Rendez-vous');
                         <?= champ_csrf() ?><button class="petit danger" name="supprimer" value="<?= $r['id'] ?>">Supprimer</button>
                     </form>
                     <?php endif; ?>
-                <?php elseif ($r['statut'] === 'annule'): ?>
-                    <small title="<?= e($r['motif_annulation']) ?>">motif : <?= e(mb_strimwidth($r['motif_annulation'] ?? '', 0, 30, '…')) ?></small>
                 <?php endif; ?>
             </td>
         </tr>

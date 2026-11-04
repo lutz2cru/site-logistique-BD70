@@ -103,8 +103,8 @@ if ($modifiable && $client && est_post()) {
                 requete('DELETE FROM ligne_commande WHERE commande_id = ?', [$id]);
                 $nid = $id;
             } else {
-                requete("INSERT INTO commande (client_id, date_commande, expedition_souhaitee, adresse_livraison, code_postal, ville, canal)
-                         VALUES (?, CURRENT_DATE, ?, ?, ?, ?, 'edi')", [$clientId, ...$donnees]);
+                requete("INSERT INTO commande (client_id, date_commande, expedition_souhaitee, adresse_livraison, code_postal, ville)
+                         VALUES (?, CURRENT_DATE, ?, ?, ?, ?)", [$clientId, ...$donnees]);
                 $nid = (int) $pdo->lastInsertId();
             }
             foreach ($lignesCmd as $art => $q) {
@@ -152,7 +152,7 @@ entete($cmd ? "Commande {$cmd['numero']}" : 'Nouvelle commande', 'commandes.php'
             <?php endif; ?>
         </span>
     </h2>
-    <p class="discret">Commandée le <?= date_fr($cmd['date_commande']) ?> · canal <?= pastille($cmd['canal']) ?> ·
+    <p class="discret">Commandée le <?= date_fr($cmd['date_commande']) ?> ·
        livraison : <?= e("{$cmd['adresse_livraison']}, {$cmd['code_postal']} {$cmd['ville']}") ?></p>
 </div>
 <?php endif; ?>

@@ -23,7 +23,6 @@ if (est_post()) {
             'id' => (int) $u['id'], 'nom' => $u['nom'], 'prenom' => $u['prenom'], 'email' => $u['email'],
             'profil' => $u['profil'], 'profil_libelle' => $u['profil_libelle'],
             'transporteur_id' => $u['transporteur_id'] !== null ? (int) $u['transporteur_id'] : null,
-            'client_id' => $u['client_id'] !== null ? (int) $u['client_id'] : null,
         ];
         flash('succes', 'Bienvenue ' . $u['prenom'] . ' !');
         rediriger('index.php');
@@ -49,7 +48,6 @@ entete('Connexion');
             <button type="submit">Se connecter</button>
         </form>
         <p>Pas encore de compte ? <a href="inscription.php">Demander un accès</a></p>
-        <p class="discret">Chauffeurs : <a href="borne.php">déclarer son arrivée</a> · <a href="ecran.php">écran d'appel</a></p>
     </div>
 </div>
 <?php pied();

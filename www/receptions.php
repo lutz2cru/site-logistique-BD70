@@ -18,8 +18,8 @@ if (est_post() && isset($_POST['passage_id'])) {
         if ($avis && !valeur("SELECT COUNT(*) FROM avis_expedition WHERE id = ? AND statut = 'attendu'", [$avis])) {
             throw new RuntimeException('Cet avis d\'expédition n\'est plus attendu.');
         }
-        requete('INSERT INTO reception (passage_id, avis_id, receptionnaire_id, debut) VALUES (?, ?, ?, NOW())',
-                [$_POST['passage_id'], $avis, $u['id']]);
+        requete('INSERT INTO reception (passage_id, avis_id, debut) VALUES (?, ?, NOW())',
+                [$_POST['passage_id'], $avis]);
         rediriger('reception.php?id=' . db()->lastInsertId());
     } catch (PDOException $e) {   // avant RuntimeException, dont elle hérite
         flash('erreur', message_erreur($e));
@@ -49,15 +49,15 @@ $where = ['r.debut >= ?', 'r.debut < ? + INTERVAL 1 DAY'];
 $params = [$f['du'], $f['au']];
 if ($f['statut'] !== '') { $where[] = 'r.statut = ?'; $params[] = $f['statut']; }
 if ($f['fournisseur'] !== '') { $where[] = 'a.fournisseur_id = ?'; $params[] = $f['fournisseur']; }
-if ($f['ecart'] === '1') { $where[] = 'EXISTS (SELECT 1 FROM ecart e WHERE e.reception_id = r.id)'; }
+if ($f['ecart'] === '1') { $where[] = 'EXISTS (SELECT 1 FROM constat_ecart e WHERE e.reception_id = r.id)'; }
 if ($f['q'] !== '') { $where[] = '(r.numero LIKE ? OR a.numero LIKE ?)'; array_push($params, "%{$f['q']}%", "%{$f['q']}%"); }
 $from = 'FROM reception r LEFT JOIN avis_expedition a ON a.id = r.avis_id LEFT JOIN fournisseur f ON f.id = a.fournisseur_id
-         JOIN utilisateur u ON u.id = r.receptionnaire_id WHERE ' . implode(' AND ', $where);
+         WHERE ' . implode(' AND ', $where);
 $total = (int) valeur("SELECT COUNT(*) $from", $params);
 [$limite, $decalage, $page, $pages] = pagination($total);
-$receptions = lignes("SELECT r.*, a.numero AS avis, f.raison_sociale AS fournisseur, CONCAT(u.prenom, ' ', u.nom) AS receptionnaire,
+$receptions = lignes("SELECT r.*, a.numero AS avis, f.raison_sociale AS fournisseur,
                              (SELECT COUNT(*) FROM reception_lot rl WHERE rl.reception_id = r.id) AS nb_lots,
-                             (SELECT COUNT(*) FROM ecart e WHERE e.reception_id = r.id) AS nb_ecarts
+                             (SELECT COUNT(*) FROM constat_ecart e WHERE e.reception_id = r.id) AS nb_ecarts
                       $from ORDER BY r.debut DESC LIMIT $limite OFFSET $decalage", $params);
 
 $fournisseurs = paires('SELECT id, raison_sociale FROM fournisseur ORDER BY raison_sociale');
@@ -101,14 +101,13 @@ entete('Réceptions');
     </form>
     <?php if (!$receptions): ?><p class="vide">Aucune réception sur cette période.</p><?php else: ?>
     <div class="tableau"><table>
-        <tr><th>Numéro</th><th>Début</th><th>Avis</th><th>Fournisseur</th><th>Réceptionnaire</th><th class="nombre">Lots</th><th class="nombre">Écarts</th><th>Statut</th></tr>
+        <tr><th>Numéro</th><th>Début</th><th>Avis</th><th>Fournisseur</th><th class="nombre">Lots</th><th class="nombre">Écarts</th><th>Statut</th></tr>
         <?php foreach ($receptions as $r): ?>
         <tr>
             <td><a href="reception.php?id=<?= $r['id'] ?>"><?= e($r['numero']) ?></a></td>
             <td><?= date_heure_fr($r['debut']) ?></td>
             <td><?= e($r['avis'] ?? 'non annoncée') ?></td>
             <td><?= e($r['fournisseur']) ?></td>
-            <td><?= e($r['receptionnaire']) ?></td>
             <td class="nombre"><?= $r['nb_lots'] ?></td>
             <td class="nombre"><?= $r['nb_ecarts'] ? '<span class="pastille rouge">' . $r['nb_ecarts'] . '</span>' : '0' ?></td>
             <td><?= pastille($r['statut']) ?></td>

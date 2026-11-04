@@ -25,14 +25,15 @@ L'interface n'était exigée que pour les domaines marqués « requis » ; les a
 
 | Acteur | Rôle |
 |---|---|
-| Administrateur | Gère les comptes et les droits, consulte le journal. N'a aucun accès à l'exploitation |
+| Administrateur | Gère les comptes et les droits. N'a aucun accès à l'exploitation |
 | Responsable d'exploitation | Décrit l'entrepôt, gère les référentiels et les commandes, génère les listes de prélèvement, suit les indicateurs |
 | Agent d'accueil | Tient le poste de garde : rendez-vous, arrivées, documents, appels à quai, départs |
 | Magasinier / préparateur | Réceptionne, range, prélève, colise, charge les camions |
-| Transporteur | Prend et suit ses propres rendez-vous |
-| Client propriétaire | Consulte son stock, passe et suit ses commandes |
-| Chauffeur | Sans compte : déclare son arrivée à la borne et lit l'écran d'appel |
-| Horloge | Marque les rendez-vous non honorés, archive le journal |
+| Transporteur | Prend, modifie et annule ses propres rendez-vous |
+
+Le visiteur (non connecté) peut seulement s'inscrire. Les cinq acteurs ci-dessus héritent de l'acteur générique « Utilisateur », qui se connecte.
+
+Les clients propriétaires, fournisseurs et chauffeurs sont des données gérées par le système, pas des acteurs : ils n'ont pas de compte. Le système se limite au périmètre du sujet ; il n'y a ni portail client, ni borne en libre-service, ni journal d'audit.
 
 ## 4. Exigences fonctionnelles
 
@@ -78,10 +79,10 @@ L'interface n'était exigée que pour les domaines marqués « requis » ; les a
 |---|---|
 | SGBD imposé | MariaDB 10.4 |
 | Normalisation | Base en 3NF, écarts justifiés dans le rapport |
-| Données factices en quantité | Simulation de deux mois d'activité, environ 125 000 lignes |
+| Données factices en quantité | Simulation de deux mois d'activité, environ 120 000 lignes |
 | Sécurité et confidentialité | Mots de passe hachés, requêtes préparées, jetons CSRF, droits par profil, compte MySQL limité |
 | Performances | Index ciblés, temps mesurés dans `rapport_performances.md` |
-| Automatisation | Déclencheurs, procédures, évènements planifiés, journal d'audit |
+| Automatisation | Déclencheurs, procédures stockées, fonctions, vues, séquences |
 | Interface conviviale | Menu par profil, formulaires contrôlés, messages d'erreur lisibles |
 
 ## 6. Livrables

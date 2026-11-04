@@ -2,9 +2,8 @@
 --  Script 2/2 : automatisation interne à la base
 --   - fonctions et procédures stockées
 --   - déclencheurs (numérotation, contrôles métier, mise à jour du stock,
---     statut des quais, historisation)
+--     statut des quais, historisation des mouvements de stock)
 --   - vues d'indicateurs
---   - évènements planifiés
 -- =====================================================================
 USE entrepot;
 
@@ -160,13 +159,6 @@ BEGIN
     END IF;
 END$$
 
-CREATE TRIGGER tr_ecart_bi BEFORE INSERT ON ecart FOR EACH ROW
-BEGIN
-    IF NEW.numero IS NULL OR NEW.numero = '' THEN
-        SET NEW.numero = CONCAT('ECA-', LPAD(NEXT VALUE FOR seq_ecart, 6, '0'));
-    END IF;
-END$$
-
 CREATE TRIGGER tr_reserve_bi BEFORE INSERT ON reserve FOR EACH ROW
 BEGIN
     IF NEW.numero IS NULL OR NEW.numero = '' THEN
@@ -273,7 +265,7 @@ BEGIN
     UPDATE passage SET etape_courante_id = NEW.type_etape_id WHERE id = NEW.passage_id;
 
     IF v_code = 'ARRIVEE' AND v_rdv_id IS NOT NULL THEN
-        UPDATE rendez_vous SET statut = 'honore' WHERE id = v_rdv_id AND statut IN ('planifie', 'absent');
+        UPDATE rendez_vous SET statut = 'honore' WHERE id = v_rdv_id AND statut = 'planifie';
     ELSEIF v_code = 'APPEL_QUAI' THEN
         UPDATE quai SET statut = 'occupe' WHERE id = v_quai_id;
     ELSEIF v_code = 'DEPART' AND v_quai_id IS NOT NULL THEN
@@ -376,70 +368,12 @@ BEGIN
 END$$
 
 -- =====================================================================
---  DÉCLENCHEURS : historisation (journal_audit)
---  L'application positionne @utilisateur_id à chaque connexion PDO.
--- =====================================================================
-CREATE TRIGGER tr_rdv_au AFTER UPDATE ON rendez_vous FOR EACH ROW
-BEGIN
-    INSERT INTO journal_audit (table_concernee, enregistrement_id, action, utilisateur_id, details)
-    VALUES ('rendez_vous', NEW.id, 'UPDATE', @utilisateur_id,
-            JSON_OBJECT('numero', NEW.numero,
-                        'avant', JSON_OBJECT('quai_id', OLD.quai_id, 'debut', OLD.debut, 'fin', OLD.fin, 'statut', OLD.statut),
-                        'apres', JSON_OBJECT('quai_id', NEW.quai_id, 'debut', NEW.debut, 'fin', NEW.fin, 'statut', NEW.statut)));
-END$$
-
-CREATE TRIGGER tr_rdv_ad AFTER DELETE ON rendez_vous FOR EACH ROW
-BEGIN
-    INSERT INTO journal_audit (table_concernee, enregistrement_id, action, utilisateur_id, details)
-    VALUES ('rendez_vous', OLD.id, 'DELETE', @utilisateur_id,
-            JSON_OBJECT('numero', OLD.numero, 'quai_id', OLD.quai_id, 'debut', OLD.debut, 'fin', OLD.fin));
-END$$
-
-CREATE TRIGGER tr_quai_au AFTER UPDATE ON quai FOR EACH ROW
-BEGIN
-    IF NEW.statut <> OLD.statut OR NEW.type <> OLD.type OR NEW.numero <> OLD.numero THEN
-        INSERT INTO journal_audit (table_concernee, enregistrement_id, action, utilisateur_id, details)
-        VALUES ('quai', NEW.id, 'UPDATE', @utilisateur_id,
-                JSON_OBJECT('numero', NEW.numero, 'statut_avant', OLD.statut, 'statut_apres', NEW.statut,
-                            'type_avant', OLD.type, 'type_apres', NEW.type));
-    END IF;
-END$$
-
-CREATE TRIGGER tr_article_au AFTER UPDATE ON article FOR EACH ROW
-BEGIN
-    INSERT INTO journal_audit (table_concernee, enregistrement_id, action, utilisateur_id, details)
-    VALUES ('article', NEW.id, 'UPDATE', @utilisateur_id,
-            JSON_OBJECT('reference', NEW.reference,
-                        'designation_avant', OLD.designation, 'designation_apres', NEW.designation,
-                        'condition_avant', OLD.condition_stockage_id, 'condition_apres', NEW.condition_stockage_id));
-END$$
-
-CREATE TRIGGER tr_emplacement_au AFTER UPDATE ON emplacement FOR EACH ROW
-BEGIN
-    IF NEW.bloque <> OLD.bloque OR NEW.capacite_palettes <> OLD.capacite_palettes THEN
-        INSERT INTO journal_audit (table_concernee, enregistrement_id, action, utilisateur_id, details)
-        VALUES ('emplacement', NEW.id, 'UPDATE', @utilisateur_id,
-                JSON_OBJECT('code', NEW.code, 'bloque_avant', OLD.bloque, 'bloque_apres', NEW.bloque,
-                            'capacite_avant', OLD.capacite_palettes, 'capacite_apres', NEW.capacite_palettes));
-    END IF;
-END$$
-
-CREATE TRIGGER tr_utilisateur_au AFTER UPDATE ON utilisateur FOR EACH ROW
-BEGIN
-    IF NEW.profil_id <> OLD.profil_id OR NEW.actif <> OLD.actif THEN
-        INSERT INTO journal_audit (table_concernee, enregistrement_id, action, utilisateur_id, details)
-        VALUES ('utilisateur', NEW.id, 'UPDATE', @utilisateur_id,
-                JSON_OBJECT('email', NEW.email, 'profil_avant', OLD.profil_id, 'profil_apres', NEW.profil_id,
-                            'actif_avant', OLD.actif, 'actif_apres', NEW.actif));
-    END IF;
-END$$
-
--- =====================================================================
 --  PROCÉDURES MÉTIER
 -- =====================================================================
 
 -- Clôture d'une réception : calcul automatique des écarts par rapport à
--- l'avis d'expédition (manquants, excédents, marchandises endommagées).
+-- l'avis d'expédition (manquants, excédents, marchandises endommagées),
+-- enregistrés dans la ternaire constat_ecart (réception, article, type d'écart).
 CREATE PROCEDURE cloturer_reception(IN p_reception_id INT UNSIGNED)
 BEGIN
     DECLARE v_avis_id INT UNSIGNED;
@@ -460,22 +394,22 @@ BEGIN
          GROUP BY l.article_id;
 
     -- manquants (et articles annoncés non livrés)
-    INSERT INTO ecart (reception_id, article_id, type, quantite, description)
-    SELECT p_reception_id, la.article_id, 'manquant', la.quantite_attendue - COALESCE(t.recu, 0),
+    INSERT INTO constat_ecart (reception_id, article_id, type_ecart_id, quantite, description)
+    SELECT p_reception_id, la.article_id, (SELECT id FROM type_ecart WHERE code = 'manquant'), la.quantite_attendue - COALESCE(t.recu, 0),
            'Écart calculé automatiquement à la clôture'
       FROM ligne_avis la LEFT JOIN tmp_recu t ON t.article_id = la.article_id
      WHERE la.avis_id = v_avis_id AND COALESCE(t.recu, 0) < la.quantite_attendue;
 
     -- excédents (y compris articles non annoncés)
-    INSERT INTO ecart (reception_id, article_id, type, quantite, description)
-    SELECT p_reception_id, t.article_id, 'excedent', t.recu - COALESCE(la.quantite_attendue, 0),
+    INSERT INTO constat_ecart (reception_id, article_id, type_ecart_id, quantite, description)
+    SELECT p_reception_id, t.article_id, (SELECT id FROM type_ecart WHERE code = 'excedent'), t.recu - COALESCE(la.quantite_attendue, 0),
            IF(la.article_id IS NULL, 'Article non annoncé dans l''avis', 'Écart calculé automatiquement à la clôture')
       FROM tmp_recu t LEFT JOIN ligne_avis la ON la.avis_id = v_avis_id AND la.article_id = t.article_id
      WHERE t.recu > COALESCE(la.quantite_attendue, 0);
 
     -- marchandises endommagées / refusées
-    INSERT INTO ecart (reception_id, article_id, type, quantite, description)
-    SELECT p_reception_id, t.article_id, 'endommage', t.abime, 'Palettes déclarées endommagées ou refusées'
+    INSERT INTO constat_ecart (reception_id, article_id, type_ecart_id, quantite, description)
+    SELECT p_reception_id, t.article_id, (SELECT id FROM type_ecart WHERE code = 'endommage'), t.abime, 'Palettes déclarées endommagées ou refusées'
       FROM tmp_recu t WHERE t.abime > 0;
 
     DROP TEMPORARY TABLE tmp_recu;
@@ -592,32 +526,6 @@ BEGIN
      WHERE id = v_commande_id AND statut = 'en_preparation'
        AND NOT EXISTS (SELECT 1 FROM liste_prelevement WHERE commande_id = v_commande_id AND statut <> 'terminee');
 END$$
-
--- Rendez-vous non honorés : passés à « absent » 2 h après la fin du créneau
-CREATE PROCEDURE marquer_rdv_absents()
-BEGIN
-    UPDATE rendez_vous SET statut = 'absent'
-     WHERE statut = 'planifie' AND fin < NOW() - INTERVAL 2 HOUR;
-END$$
-
--- Archivage des entrées du journal plus anciennes que p_jours
-CREATE PROCEDURE archiver_journal(IN p_jours INT)
-BEGIN
-    START TRANSACTION;
-    INSERT INTO journal_audit_archive
-        SELECT * FROM journal_audit WHERE date_heure < NOW() - INTERVAL p_jours DAY;
-    DELETE FROM journal_audit WHERE date_heure < NOW() - INTERVAL p_jours DAY;
-    COMMIT;
-END$$
-
--- =====================================================================
---  ÉVÈNEMENTS PLANIFIÉS (nécessitent event_scheduler = ON)
--- =====================================================================
-CREATE EVENT ev_rdv_absents ON SCHEDULE EVERY 15 MINUTE
-DO CALL marquer_rdv_absents()$$
-
-CREATE EVENT ev_archiver_journal ON SCHEDULE EVERY 1 DAY STARTS (CURRENT_DATE + INTERVAL 1 DAY + INTERVAL 3 HOUR)
-DO CALL archiver_journal(180)$$
 
 DELIMITER ;
 

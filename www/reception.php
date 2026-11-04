@@ -7,12 +7,11 @@ $peutSaisir = a_profil('magasinier');   // le responsable consulte, le magasinie
 
 $id = (int) ($_GET['id'] ?? 0);
 $rec = ligne("SELECT r.*, a.numero AS avis, a.livraison_prevue, f.raison_sociale AS fournisseur, p.numero AS passage, p.id AS passage_id,
-                     v.immatriculation, t.raison_sociale AS transporteur, q.numero AS quai, CONCAT(us.prenom, ' ', us.nom) AS receptionnaire
+                     v.immatriculation, t.raison_sociale AS transporteur, q.numero AS quai
                 FROM reception r
                 JOIN passage p ON p.id = r.passage_id JOIN vehicule v ON v.id = p.vehicule_id
                 JOIN transporteur t ON t.id = v.transporteur_id LEFT JOIN quai q ON q.id = p.quai_id
                 LEFT JOIN avis_expedition a ON a.id = r.avis_id LEFT JOIN fournisseur f ON f.id = a.fournisseur_id
-                JOIN utilisateur us ON us.id = r.receptionnaire_id
                WHERE r.id = ?", [$id]);
 if (!$rec) { rediriger('receptions.php'); }
 $enCours = $rec['statut'] === 'en_cours';
@@ -62,34 +61,32 @@ if (est_post()) {
                 $erreurs[] = 'Aucun lot n\'a été saisi.';
             } else {
                 requete('CALL cloturer_reception(?)', [$id]);   // calcule automatiquement les écarts
-                $n = (int) valeur('SELECT COUNT(*) FROM ecart WHERE reception_id = ?', [$id]);
+                $n = (int) valeur('SELECT COUNT(*) FROM constat_ecart WHERE reception_id = ?', [$id]);
                 flash($n ? 'info' : 'succes', $n ? "Réception clôturée : $n écart(s) détecté(s) par rapport à l'avis." : 'Réception clôturée sans écart.');
             }
-        } elseif ($action === 'declarer_ecart') {
+        } elseif ($action === 'declarer_ecart' && !$enCours) {
+            // constat manuel (casse découverte au rangement…) : s'ajoute au constat existant de même article et même type
             $qte = filter_var($_POST['quantite'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            if ($qte === false || !in_array($_POST['type'] ?? '', ['manquant', 'excedent', 'endommage'], true) || empty($_POST['article_id'])) {
+            if ($qte === false || empty($_POST['type_ecart_id']) || empty($_POST['article_id'])) {
                 $erreurs[] = 'Renseignez l\'article, le type et une quantité positive.';
             } else {
-                requete('INSERT INTO ecart (reception_id, article_id, type, quantite, description) VALUES (?, ?, ?, ?, ?)',
-                        [$id, $_POST['article_id'], $_POST['type'], $qte, trim($_POST['description'] ?? '') ?: null]);
+                requete('INSERT INTO constat_ecart (reception_id, article_id, type_ecart_id, quantite, description) VALUES (?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE quantite = quantite + VALUES(quantite), description = COALESCE(VALUES(description), description)',
+                        [$id, $_POST['article_id'], $_POST['type_ecart_id'], $qte, trim($_POST['description'] ?? '') ?: null]);
                 flash('succes', 'Écart enregistré.');
             }
         } elseif ($action === 'reserve') {
-            $ids = array_map('intval', $_POST['ecarts'] ?? []);
             $motif = trim($_POST['motif'] ?? '');
-            if (!$ids || $motif === '') {
-                $erreurs[] = 'Sélectionnez au moins un écart et indiquez le motif de la réserve.';
+            if ($motif === '') {
+                $erreurs[] = 'Indiquez le motif de la réserve.';
             } else {
-                $pdo->beginTransaction();
-                requete('INSERT INTO reserve (date_emission, motif, transmise) VALUES (NOW(), ?, ?)', [$motif, isset($_POST['transmise']) ? 1 : 0]);
+                requete('INSERT INTO reserve (reception_id, date_emission, motif, transmise) VALUES (?, NOW(), ?, ?)',
+                        [$id, $motif, isset($_POST['transmise']) ? 1 : 0]);
                 $resId = (int) $pdo->lastInsertId();
-                $ph = implode(',', array_fill(0, count($ids), '?'));
-                requete("UPDATE ecart SET reserve_id = ? WHERE reception_id = ? AND reserve_id IS NULL AND id IN ($ph)", [$resId, $id, ...$ids]);
-                $pdo->commit();
                 flash('succes', 'Réserve ' . valeur('SELECT numero FROM reserve WHERE id = ?', [$resId]) . ' émise auprès de ' . $rec['transporteur'] . '.');
             }
         } elseif ($action === 'transmettre') {
-            requete('UPDATE reserve SET transmise = TRUE WHERE id = ?', [$_POST['reserve_id']]);
+            requete('UPDATE reserve SET transmise = TRUE WHERE id = ? AND reception_id = ?', [$_POST['reserve_id'], $id]);
             flash('succes', 'Réserve marquée comme transmise.');
         }
     } catch (PDOException $e) {
@@ -116,9 +113,11 @@ $lots = lignes("SELECT l.*, rl.quantite_recue, rl.etat_palette, ar.reference, ar
                        (SELECT GROUP_CONCAT(DISTINCT e.code SEPARATOR ', ') FROM stock s JOIN emplacement e ON e.id = s.emplacement_id WHERE s.lot_id = l.id) AS emplacements
                   FROM reception_lot rl JOIN lot l ON l.id = rl.lot_id JOIN article ar ON ar.id = l.article_id
                  WHERE rl.reception_id = ? ORDER BY l.id", [$id]);
-$ecarts = lignes('SELECT e.*, ar.reference, ar.designation, rs.numero AS reserve, rs.transmise, rs.id AS reserve_id
-                    FROM ecart e JOIN article ar ON ar.id = e.article_id LEFT JOIN reserve rs ON rs.id = e.reserve_id
-                   WHERE e.reception_id = ? ORDER BY e.id', [$id]);
+$ecarts = lignes('SELECT ce.*, te.code AS type, ar.reference, ar.designation
+                    FROM constat_ecart ce JOIN type_ecart te ON te.id = ce.type_ecart_id JOIN article ar ON ar.id = ce.article_id
+                   WHERE ce.reception_id = ? ORDER BY ar.reference, te.id', [$id]);
+$reserves = lignes('SELECT * FROM reserve WHERE reception_id = ? ORDER BY date_emission', [$id]);
+$typesEcart = paires('SELECT id, libelle FROM type_ecart ORDER BY id');
 
 $annonces = paires("SELECT ar.id, CONCAT(ar.reference, ' — ', ar.designation) FROM ligne_avis la JOIN article ar ON ar.id = la.article_id WHERE la.avis_id = ? ORDER BY ar.reference", [$rec['avis_id']]);
 $autres = paires("SELECT id, CONCAT(reference, ' — ', designation) FROM article ORDER BY reference");
@@ -139,7 +138,7 @@ entete("Réception {$rec['numero']}", 'receptions.php');
     </h2>
     <p class="discret">
         Camion <a href="passage.php?id=<?= $rec['passage_id'] ?>"><?= e($rec['immatriculation']) ?></a> (<?= e($rec['transporteur']) ?>) · quai <?= e($rec['quai']) ?> ·
-        début <?= date_heure_fr($rec['debut']) ?><?= $rec['fin'] ? ' · fin ' . date_heure_fr($rec['fin']) : '' ?> · réceptionnaire <?= e($rec['receptionnaire']) ?>
+        début <?= date_heure_fr($rec['debut']) ?><?= $rec['fin'] ? ' · fin ' . date_heure_fr($rec['fin']) : '' ?>
     </p>
 </div>
 
@@ -216,49 +215,65 @@ entete("Réception {$rec['numero']}", 'receptions.php');
     <?php endif; ?>
 </div>
 
+<div class="grille">
 <div class="carte">
-    <h2>Écarts et réserves</h2>
+    <h2>Écarts constatés</h2>
     <?php if (!$ecarts): ?><p class="vide"><?= $enCours ? 'Les écarts seront calculés à la clôture.' : 'Aucun écart sur cette réception.' ?></p><?php else: ?>
-    <form method="post">
-        <?= champ_csrf() ?>
-        <div class="tableau"><table>
-            <tr><th></th><th>Numéro</th><th>Article</th><th>Type</th><th class="nombre">Quantité</th><th>Description</th><th>Réserve</th></tr>
-            <?php foreach ($ecarts as $ec): ?>
-            <tr>
-                <td><?php if ($peutSaisir && !$ec['reserve_id']): ?><input type="checkbox" name="ecarts[]" value="<?= $ec['id'] ?>"><?php endif; ?></td>
-                <td><?= e($ec['numero']) ?></td>
-                <td><strong><?= e($ec['reference']) ?></strong> <?= e($ec['designation']) ?></td>
-                <td><?= pastille($ec['type']) ?></td>
-                <td class="nombre"><?= nombre($ec['quantite']) ?></td>
-                <td><small><?= e($ec['description']) ?></small></td>
-                <td><?php if ($ec['reserve_id']): ?>
-                    <?= e($ec['reserve']) ?> <?= $ec['transmise'] ? pastille('recu') : ($peutSaisir ? '<button class="petit discret" name="action" value="transmettre" onclick="this.form.reserve_id.value=' . $ec['reserve_id'] . '">Marquer transmise</button>' : '') ?>
-                <?php endif; ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </table></div>
-        <?php if ($peutSaisir): ?>
-        <input type="hidden" name="reserve_id" value="">
-        <h3>Émettre une réserve auprès du transporteur pour les écarts cochés</h3>
-        <div class="filtres">
-            <label style="flex:1">Motif<input name="motif" maxlength="255" placeholder="ex. 3 colis écrasés, film déchiré"></label>
-            <label class="case" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="transmise" checked> transmise au chauffeur</label>
-            <button name="action" value="reserve" class="secondaire">Émettre la réserve</button>
-        </div>
-        <?php endif; ?>
-    </form>
+    <div class="tableau"><table>
+        <tr><th>Article</th><th>Type</th><th class="nombre">Quantité</th><th>Description</th></tr>
+        <?php foreach ($ecarts as $ec): ?>
+        <tr>
+            <td><strong><?= e($ec['reference']) ?></strong> <?= e($ec['designation']) ?></td>
+            <td><?= pastille($ec['type']) ?></td>
+            <td class="nombre"><?= nombre($ec['quantite']) ?></td>
+            <td><small><?= e($ec['description']) ?></small></td>
+        </tr>
+        <?php endforeach; ?>
+    </table></div>
     <?php endif; ?>
 
-    <?php if ($peutSaisir): ?>
+    <?php if ($peutSaisir && !$enCours): ?>
     <h3>Déclarer un écart manuellement</h3>
     <form method="post" class="filtres">
         <?= champ_csrf() ?><input type="hidden" name="action" value="declarer_ecart">
         <label>Article<select name="article_id" required><option value="">—</option><?= options($annonces + array_intersect_key($autres, array_flip(array_column($lots, 'article_id')))) ?></select></label>
-        <label>Type<select name="type"><?= options(['manquant' => 'Manquant', 'excedent' => 'Excédent', 'endommage' => 'Endommagé']) ?></select></label>
+        <label>Type<select name="type_ecart_id"><?= options($typesEcart) ?></select></label>
         <label>Quantité<input type="number" name="quantite" min="1" required style="width:100px"></label>
         <label style="flex:1">Description<input name="description" maxlength="255"></label>
         <button class="secondaire">Déclarer</button>
     </form>
     <?php endif; ?>
+</div>
+
+<div class="carte">
+    <h2>Réserves auprès du transporteur</h2>
+    <?php if (!$reserves): ?><p class="vide">Aucune réserve émise.</p><?php else: ?>
+    <div class="tableau"><table>
+        <tr><th>Numéro</th><th>Émise le</th><th>Motif</th><th>Transmise</th></tr>
+        <?php foreach ($reserves as $rs): ?>
+        <tr>
+            <td><?= e($rs['numero']) ?></td>
+            <td><?= date_heure_fr($rs['date_emission']) ?></td>
+            <td><?= e($rs['motif']) ?></td>
+            <td><?php if ($rs['transmise']): ?><?= pastille('recu') ?>
+                <?php elseif ($peutSaisir): ?>
+                <form method="post"><?= champ_csrf() ?><input type="hidden" name="reserve_id" value="<?= $rs['id'] ?>">
+                    <button class="petit discret" name="action" value="transmettre">Marquer transmise</button></form>
+                <?php else: ?>Non<?php endif; ?></td>
+        </tr>
+        <?php endforeach; ?>
+    </table></div>
+    <?php endif; ?>
+
+    <?php if ($peutSaisir): ?>
+    <h3>Émettre une réserve</h3>
+    <form method="post" class="filtres">
+        <?= champ_csrf() ?><input type="hidden" name="action" value="reserve">
+        <label style="flex:1">Motif<input name="motif" maxlength="255" required placeholder="ex. 3 colis écrasés, film déchiré"></label>
+        <label class="case" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="transmise" checked> transmise au chauffeur</label>
+        <button class="secondaire">Émettre la réserve</button>
+    </form>
+    <?php endif; ?>
+</div>
 </div>
 <?php pied();

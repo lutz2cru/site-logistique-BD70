@@ -24,7 +24,6 @@ CREATE SEQUENCE seq_rdv;
 CREATE SEQUENCE seq_passage;
 CREATE SEQUENCE seq_avis;
 CREATE SEQUENCE seq_reception;
-CREATE SEQUENCE seq_ecart;
 CREATE SEQUENCE seq_reserve;
 CREATE SEQUENCE seq_lot;
 CREATE SEQUENCE seq_mouvement;
@@ -71,8 +70,6 @@ CREATE TABLE utilisateur (
     actif             BOOLEAN          NOT NULL DEFAULT FALSE, -- compte validé par un administrateur
     profil_id         TINYINT UNSIGNED NOT NULL,
     transporteur_id   INT UNSIGNED     NULL,              -- renseigné pour le profil « transporteur »
-    client_id         INT UNSIGNED     NULL,              -- renseigné pour le profil « client » (clé étrangère ajoutée après la table client)
-    CONSTRAINT ck_utilisateur_rattachement CHECK (transporteur_id IS NULL OR client_id IS NULL),
     CONSTRAINT fk_utilisateur_profil       FOREIGN KEY (profil_id)       REFERENCES profil (id),
     CONSTRAINT fk_utilisateur_transporteur FOREIGN KEY (transporteur_id) REFERENCES transporteur (id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
@@ -196,13 +193,11 @@ CREATE TABLE rendez_vous (
     debut            DATETIME          NOT NULL,
     fin              DATETIME          NOT NULL,
     sens             ENUM('reception','expedition') NOT NULL,
-    statut           ENUM('planifie','honore','annule','absent') NOT NULL DEFAULT 'planifie',
+    statut           ENUM('planifie','honore','annule') NOT NULL DEFAULT 'planifie',
     commentaire      VARCHAR(255)      NULL,
-    motif_annulation VARCHAR(255)      NULL,
     CONSTRAINT fk_rdv_quai     FOREIGN KEY (quai_id)     REFERENCES quai (id),
     CONSTRAINT fk_rdv_vehicule FOREIGN KEY (vehicule_id) REFERENCES vehicule (id),
     CONSTRAINT ck_rdv_creneau  CHECK (fin > debut),
-    CONSTRAINT ck_rdv_annulation CHECK (statut <> 'annule' OR motif_annulation IS NOT NULL),
     -- index utilisé par le contrôle de chevauchement et le planning
     INDEX ix_rdv_quai_creneau (quai_id, debut, fin),
     INDEX ix_rdv_debut (debut)
@@ -230,7 +225,6 @@ CREATE TABLE passage (
     -- déclencheur pour éviter une sous-requête dans chaque écran temps réel.
     etape_courante_id TINYINT UNSIGNED NULL,
     observations   VARCHAR(255)      NULL,
-    borne          BOOLEAN           NOT NULL DEFAULT FALSE, -- arrivée déclarée par le chauffeur à la borne
     CONSTRAINT fk_passage_rdv       FOREIGN KEY (rendez_vous_id)    REFERENCES rendez_vous (id) ON DELETE SET NULL,
     CONSTRAINT fk_passage_vehicule  FOREIGN KEY (vehicule_id)       REFERENCES vehicule (id),
     CONSTRAINT fk_passage_chauffeur FOREIGN KEY (chauffeur_id)      REFERENCES chauffeur (id),
@@ -265,10 +259,6 @@ CREATE TABLE client (
     CONSTRAINT ck_client_siret CHECK (siret REGEXP '^[0-9]{14}$'),
     CONSTRAINT ck_client_cp    CHECK (code_postal REGEXP '^[0-9]{5}$')
 ) ENGINE=InnoDB;
-
--- Compte du portail client : un utilisateur peut représenter un client propriétaire
-ALTER TABLE utilisateur
-    ADD CONSTRAINT fk_utilisateur_client FOREIGN KEY (client_id) REFERENCES client (id) ON DELETE SET NULL;
 
 CREATE TABLE condition_stockage (
     id              TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -438,13 +428,11 @@ CREATE TABLE reception (
     numero            VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
     passage_id        INT UNSIGNED NOT NULL,
     avis_id           INT UNSIGNED NULL,               -- NULL = livraison non annoncée
-    receptionnaire_id INT UNSIGNED NOT NULL,
     debut             DATETIME     NOT NULL,
     fin               DATETIME     NULL,
     statut            ENUM('en_cours','cloturee') NOT NULL DEFAULT 'en_cours',
     CONSTRAINT fk_reception_passage FOREIGN KEY (passage_id)        REFERENCES passage (id),
     CONSTRAINT fk_reception_avis    FOREIGN KEY (avis_id)           REFERENCES avis_expedition (id),
-    CONSTRAINT fk_reception_user    FOREIGN KEY (receptionnaire_id) REFERENCES utilisateur (id),
     CONSTRAINT ck_reception_dates CHECK (fin IS NULL OR fin >= debut),
     CONSTRAINT ck_reception_cloture CHECK (statut = 'en_cours' OR fin IS NOT NULL)
 ) ENGINE=InnoDB;
@@ -461,27 +449,35 @@ CREATE TABLE reception_lot (
     CONSTRAINT ck_rl_quantite CHECK (quantite_recue > 0)
 ) ENGINE=InnoDB;
 
+-- Association 1:N « Porter sur » : réserve émise auprès du transporteur pour une réception
 CREATE TABLE reserve (
     id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     numero        VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
+    reception_id  INT UNSIGNED NOT NULL,
     date_emission DATETIME     NOT NULL,
     motif         VARCHAR(255) NOT NULL,
-    transmise     BOOLEAN      NOT NULL DEFAULT FALSE  -- transmise au transporteur
+    transmise     BOOLEAN      NOT NULL DEFAULT FALSE,  -- transmise au transporteur
+    CONSTRAINT fk_reserve_reception FOREIGN KEY (reception_id) REFERENCES reception (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE TABLE ecart (
-    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    numero       VARCHAR(12)  NOT NULL DEFAULT '' UNIQUE,
-    reception_id INT UNSIGNED NOT NULL,
-    article_id   INT UNSIGNED NOT NULL,
-    type         ENUM('manquant','excedent','endommage') NOT NULL,
-    quantite     INT UNSIGNED NOT NULL,
-    description  VARCHAR(255) NULL,
-    reserve_id   INT UNSIGNED NULL,
-    CONSTRAINT fk_ecart_reception FOREIGN KEY (reception_id) REFERENCES reception (id) ON DELETE CASCADE,
-    CONSTRAINT fk_ecart_article   FOREIGN KEY (article_id)   REFERENCES article (id),
-    CONSTRAINT fk_ecart_reserve   FOREIGN KEY (reserve_id)   REFERENCES reserve (id) ON DELETE SET NULL,
-    CONSTRAINT ck_ecart_quantite CHECK (quantite > 0)
+CREATE TABLE type_ecart (
+    id      TINYINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    code    VARCHAR(20) NOT NULL UNIQUE,                -- manquant, excedent, endommage
+    libelle VARCHAR(60) NOT NULL
+) ENGINE=InnoDB;
+
+-- Association ternaire « Constater » : réception × article × type d'écart
+CREATE TABLE constat_ecart (
+    reception_id  INT UNSIGNED     NOT NULL,
+    article_id    INT UNSIGNED     NOT NULL,
+    type_ecart_id TINYINT UNSIGNED NOT NULL,
+    quantite      INT UNSIGNED     NOT NULL,
+    description   VARCHAR(255)     NULL,
+    PRIMARY KEY (reception_id, article_id, type_ecart_id),
+    CONSTRAINT fk_ce_reception  FOREIGN KEY (reception_id)  REFERENCES reception (id) ON DELETE CASCADE,
+    CONSTRAINT fk_ce_article    FOREIGN KEY (article_id)    REFERENCES article (id),
+    CONSTRAINT fk_ce_type_ecart FOREIGN KEY (type_ecart_id) REFERENCES type_ecart (id),
+    CONSTRAINT ck_ce_quantite CHECK (quantite > 0)
 ) ENGINE=InnoDB;
 
 -- =====================================================================
@@ -497,7 +493,6 @@ CREATE TABLE commande (
     code_postal          CHAR(5)      NOT NULL,
     ville                VARCHAR(80)  NOT NULL,
     statut               ENUM('recue','en_preparation','preparee','expediee','annulee') NOT NULL DEFAULT 'recue',
-    canal                ENUM('edi','portail') NOT NULL DEFAULT 'edi', -- échange informatisé ou saisie sur le portail client
     CONSTRAINT fk_commande_client FOREIGN KEY (client_id) REFERENCES client (id),
     CONSTRAINT ck_commande_dates CHECK (expedition_souhaitee >= date_commande),
     INDEX ix_commande_expedition (expedition_souhaitee)
@@ -584,21 +579,3 @@ CREATE TABLE document_transport (
     date_emission DATETIME     NOT NULL,
     CONSTRAINT fk_dt_expedition FOREIGN KEY (expedition_id) REFERENCES expedition (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-
--- =====================================================================
---  Historisation : journal des modifications (alimenté par déclencheurs)
--- =====================================================================
-CREATE TABLE journal_audit (
-    id               BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    table_concernee  VARCHAR(40)  NOT NULL,
-    enregistrement_id INT UNSIGNED NOT NULL,
-    action           ENUM('INSERT','UPDATE','DELETE') NOT NULL,
-    utilisateur_id   INT UNSIGNED NULL,                -- variable de session @utilisateur_id
-    date_heure       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    details          TEXT         NULL,
-    INDEX ix_journal_table (table_concernee, enregistrement_id),
-    INDEX ix_journal_date (date_heure)
-) ENGINE=InnoDB;
-
--- Archive du journal (déplacement périodique par l'évènement ev_archiver_journal)
-CREATE TABLE journal_audit_archive LIKE journal_audit;

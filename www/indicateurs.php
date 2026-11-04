@@ -18,9 +18,9 @@ $flux = ligne("SELECT COUNT(*) AS passages, ROUND(AVG(attente_min)) AS attente, 
                  FROM v_passage_durees WHERE depart IS NOT NULL AND arrivee >= ? AND arrivee < ? + INTERVAL 1 DAY", $periode);
 $nbQuais = (int) valeur("SELECT COUNT(*) FROM quai WHERE statut <> 'hors_service'");
 $tauxQuais = $flux['jours'] ? round(100 * $flux['occupation'] / ($nbQuais * $flux['jours'] * AMPLITUDE_MIN), 1) : null;
-$rdv = ligne("SELECT COUNT(*) AS total, SUM(statut = 'absent') AS absents, SUM(statut = 'annule') AS annules
+$rdv = ligne("SELECT COUNT(*) AS total, SUM(statut = 'annule') AS annules
                 FROM rendez_vous WHERE debut >= ? AND debut < ? + INTERVAL 1 DAY AND debut < NOW()", $periode);
-$recep = ligne("SELECT COUNT(*) AS n, ROUND(100 * SUM(EXISTS (SELECT 1 FROM ecart e WHERE e.reception_id = r.id)) / NULLIF(COUNT(*), 0), 1) AS taux
+$recep = ligne("SELECT COUNT(*) AS n, ROUND(100 * SUM(EXISTS (SELECT 1 FROM constat_ecart e WHERE e.reception_id = r.id)) / NULLIF(COUNT(*), 0), 1) AS taux
                   FROM reception r WHERE r.statut = 'cloturee' AND r.debut >= ? AND r.debut < ? + INTERVAL 1 DAY", $periode);
 $remplissage = valeur('SELECT ROUND(100 * SUM(occupees) / SUM(capacite), 1) FROM v_remplissage_zone');
 
@@ -41,9 +41,10 @@ $parTransporteur = lignes("SELECT t.raison_sociale, COUNT(*) AS passages, ROUND(
 $zones = lignes('SELECT libelle, occupees, capacite, taux FROM v_remplissage_zone ORDER BY code');
 $fournisseurs = lignes("SELECT f.raison_sociale, COUNT(DISTINCT r.id) AS receptions, COUNT(DISTINCT e.reception_id) AS avec_ecart,
                                ROUND(100 * COUNT(DISTINCT e.reception_id) / COUNT(DISTINCT r.id), 1) AS taux,
-                               SUM(e.type = 'manquant') AS manquants, SUM(e.type = 'endommage') AS casses
+                               SUM(te.code = 'manquant') AS manquants, SUM(te.code = 'endommage') AS casses
                           FROM reception r JOIN avis_expedition a ON a.id = r.avis_id JOIN fournisseur f ON f.id = a.fournisseur_id
-                          LEFT JOIN ecart e ON e.reception_id = r.id
+                          LEFT JOIN constat_ecart e ON e.reception_id = r.id
+                          LEFT JOIN type_ecart te ON te.id = e.type_ecart_id
                          WHERE r.statut = 'cloturee' AND r.debut >= ? AND r.debut < ? + INTERVAL 1 DAY
                          GROUP BY f.id ORDER BY taux DESC LIMIT 10", $periode);
 $preparateurs = lignes("SELECT CONCAT(u.prenom, ' ', u.nom) AS nom, COUNT(*) AS listes, SUM(x.lignes) AS lignes, SUM(x.unites) AS unites,
@@ -75,7 +76,7 @@ entete('Indicateurs de pilotage');
     <div class="kpi"><div class="valeur"><?= duree($flux['attente'] !== null ? (int) $flux['attente'] : null) ?></div><div class="libelle">attente moyenne avant quai</div></div>
     <div class="kpi"><div class="valeur"><?= duree($flux['immo'] !== null ? (int) $flux['immo'] : null) ?></div><div class="libelle">immobilisation moyenne</div></div>
     <div class="kpi"><div class="valeur"><?= nombre($flux['taux_retard'], 1) ?> %</div><div class="libelle">arrivées en retard</div></div>
-    <div class="kpi"><div class="valeur"><?= nombre($rdv['absents']) ?> / <?= nombre($rdv['total']) ?></div><div class="libelle">RDV non honorés</div></div>
+    <div class="kpi"><div class="valeur"><?= nombre($rdv['annules']) ?> / <?= nombre($rdv['total']) ?></div><div class="libelle">RDV annulés</div></div>
     <div class="kpi"><div class="valeur"><?= nombre($recep['taux'], 1) ?> %</div><div class="libelle">réceptions avec écart (<?= nombre($recep['n']) ?>)</div></div>
     <div class="kpi"><div class="valeur"><?= nombre($remplissage, 1) ?> %</div><div class="libelle">remplissage actuel</div></div>
 </div>

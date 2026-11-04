@@ -63,14 +63,9 @@ if (est_post()) {
     if ($action === 'annuler' && $estResponsable) { exit('Action non autorisée.'); }
 
     if ($action === 'annuler' && $rdv && $modifiable) {
-        $motif = trim($_POST['motif_annulation'] ?? '');
-        if ($motif === '') {
-            $erreurs[] = 'Indiquez le motif de l\'annulation.';
-        } else {
-            requete("UPDATE rendez_vous SET statut = 'annule', motif_annulation = ? WHERE id = ?", [$motif, $id]);
-            flash('succes', "Rendez-vous {$rdv['numero']} annulé.");
-            rediriger('rdv.php');
-        }
+        requete("UPDATE rendez_vous SET statut = 'annule' WHERE id = ?", [$id]);
+        flash('succes', "Rendez-vous {$rdv['numero']} annulé.");
+        rediriger('rdv.php');
     } elseif ($modifiable) {
         // contrôle des saisies
         $vehiculesIds = array_column($vehicules, 'id');
@@ -187,8 +182,7 @@ entete($rdv ? "Rendez-vous {$rdv['numero']}" : 'Nouveau rendez-vous', 'rdv.php')
     <h2>Annuler ce rendez-vous</h2>
     <form method="post" class="filtres">
         <?= champ_csrf() ?>
-        <label style="flex:1">Motif de l'annulation<input name="motif_annulation" required maxlength="255"></label>
-        <button type="submit" name="action" value="annuler" class="danger">Annuler le rendez-vous</button>
+        <button type="submit" name="action" value="annuler" class="danger" onclick="return confirm('Annuler ce rendez-vous ?')">Annuler le rendez-vous</button>
     </form>
 </div>
 <?php endif; ?>
