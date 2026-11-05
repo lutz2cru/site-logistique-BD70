@@ -6,14 +6,16 @@ Format annoncé : 10 min de présentation (5 min avec support + 5 min de démons
 |---|---|
 | `diaporama.html` | Les 8 diapos et leurs notes d'orateur, lisibles hors ligne dans un navigateur (les polices viennent de Google Fonts quand on est connecté) |
 | `script_demo.html` | Script de la démo : préparation, 7 scènes minutées, texte à dire, notions de cours, plan B, chronomètre |
+| `revision.html` | Révisions : notions du cours et des TD reliées au projet, 40 questions probables avec réponses, relances et références (mode entraînement) |
 | `diaporama/` | Sources des diapos (`deck.json` + une diapo HTML par fichier), copie de l'artifact en ligne |
 
 ## Versions en ligne (claude.ai, privées)
 
 - Diaporama, exportable en .pptx ou PDF depuis la page : https://claude.ai/artifact/8KHYnsUDXUYyWHCP5YWf92
 - Script de démo : https://claude.ai/artifact/UTTQ3PyApCrGjTAKyAf7cr
+- Révisions : https://claude.ai/artifact/2Wzdi4N3ngnKSZoxWfTb43
 
-Les deux liens ne s'ouvrent que pour leur propriétaire, jusqu'à ce qu'ils soient partagés depuis le menu *Share* de la page.
+Ces liens ne s'ouvrent que pour leur propriétaire, jusqu'à ce qu'ils soient partagés depuis le menu *Share* de la page.
 
 ## Avant la soutenance
 

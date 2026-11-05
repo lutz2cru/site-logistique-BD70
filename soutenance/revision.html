@@ -1,0 +1,395 @@
+<title>Révisions soutenance BD70</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --bg: #f4f1ea; --card: #fffdf8; --ink: #1b2436; --muted: #5a6274; --line: #d9d3c6;
+  --navy: #1f2e4d; --accent: #d9622b; --accent-soft: #f7e3d6; --ok: #2f7a4f; --ok-soft: #dcefe3;
+  --warn: #9a3412; --warn-soft: #fde7d9; --chip: #ebe6db; --code: #efeadf;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121826; --card: #1a2233; --ink: #e8e4da; --muted: #a3a9b8; --line: #2e384d;
+  --navy: #c9d4ec; --accent: #f08a52; --accent-soft: #3a2519; --ok: #6cc592; --ok-soft: #173326;
+  --warn: #f6a878; --warn-soft: #3a2116; --chip: #242e42; --code: #232c3e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121826; --card: #1a2233; --ink: #e8e4da; --muted: #a3a9b8; --line: #2e384d;
+  --navy: #c9d4ec; --accent: #f08a52; --accent-soft: #3a2519; --ok: #6cc592; --ok-soft: #173326;
+  --warn: #f6a878; --warn-soft: #3a2116; --chip: #242e42; --code: #232c3e; color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 'Public Sans', system-ui, sans-serif; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: 'Oswald', 'Arial Narrow', sans-serif; font-weight: 600; color: var(--navy); text-wrap: balance; margin: 0; letter-spacing: .01em; }
+h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.1; }
+h2 { font-size: 26px; margin-bottom: 6px; }
+code, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: .86em; }
+code { background: var(--code); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.kicker { font: 600 12px/1 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .14em; color: var(--accent); }
+header { display: grid; gap: 14px; padding-bottom: 24px; border-bottom: 3px solid var(--navy); }
+header p { margin: 0; max-width: 68ch; color: var(--muted); }
+.stats { display: flex; flex-wrap: wrap; gap: 10px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.stat b { font: 600 20px 'Oswald', sans-serif; color: var(--navy); margin-right: 4px; }
+.stat span { color: var(--muted); font-size: 14px; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 4px; font-size: 15px; }
+nav.toc a { color: var(--navy); font-weight: 600; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+section { margin-top: 44px; display: grid; gap: 16px; }
+section > p.lead { margin: 0; color: var(--muted); max-width: 70ch; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--chip); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; color: var(--navy); width: 22%; }
+td.src { width: 18%; color: var(--muted); font-size: 13.5px; }
+.tag { display: inline-block; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .04em; padding: 2px 6px; border-radius: 4px; margin: 0 4px 3px 0; white-space: nowrap; }
+.t-cours { background: var(--chip); color: var(--navy); }
+.t-td { background: var(--accent-soft); color: var(--warn); }
+.t-non { background: var(--warn-soft); color: var(--warn); }
+.toolbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 600 13px 'Public Sans', sans-serif; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--navy); color: var(--bg); border-color: var(--navy); }
+.row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.row label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; cursor: pointer; }
+input[type="search"] { font: inherit; font-size: 15px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); min-width: 0; flex: 1 1 220px; }
+.progress { font: 600 13px 'JetBrains Mono', monospace; color: var(--ok); margin-left: auto; }
+.btn { font: 600 13px 'Public Sans', sans-serif; border: 1px solid var(--navy); background: transparent; color: var(--navy); padding: 6px 11px; border-radius: 8px; cursor: pointer; }
+.qlist { display: grid; gap: 12px; }
+.q { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--navy); border-radius: 10px; padding: 14px 16px; display: grid; gap: 8px; min-width: 0; }
+.q.weak { border-left-color: var(--accent); }
+.q.known { opacity: .62; }
+.qhead { display: flex; gap: 10px; align-items: flex-start; }
+.qnum { font: 600 13px 'JetBrains Mono', monospace; color: var(--muted); padding-top: 3px; min-width: 2.4em; }
+.qtext { font-weight: 700; font-size: 16.5px; flex: 1; min-width: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px; padding-left: calc(2.4em + 10px); }
+.answer { padding-left: calc(2.4em + 10px); display: grid; gap: 8px; }
+.answer p { margin: 0; max-width: 72ch; }
+.relance { background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; font-size: 15px; }
+.relance b { color: var(--warn); }
+.ref { font-size: 13.5px; color: var(--muted); }
+.reveal { justify-self: start; }
+.known-box { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ok); cursor: pointer; white-space: nowrap; padding-top: 3px; }
+pre { margin: 0; background: var(--code); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font: 13px/1.5 'JetBrains Mono', monospace; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.panel h3 { font-size: 18px; margin-bottom: 8px; }
+.panel ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+.empty { color: var(--muted); font-style: italic; }
+@media (max-width: 560px) { .meta, .answer { padding-left: 0; } .qnum { min-width: 0; } }
+</style>
+
+<div class="wrap">
+<header>
+  <span class="kicker">BD70 · Soutenance du projet entrepôt · <span id="jours"></span></span>
+  <h1>Révisions : le projet relu avec le cours et les TD</h1>
+  <p>Chaque notion du cours de A. Lombard et des TD est reliée à l'endroit du projet où elle sert, puis on prépare les questions individuelles probables. Il y a une réponse courte à dire, la relance que le prof risque de faire et le fichier à citer. Les cartes orange sont nos points faibles : il faut les connaître par cœur.</p>
+  <div class="stats">
+    <div class="stat"><b>45</b><span>tables en 3FN</span></div>
+    <div class="stat"><b>20</b><span>déclencheurs</span></div>
+    <div class="stat"><b>6 + 4</b><span>procédures + fonctions</span></div>
+    <div class="stat"><b>5</b><span>vues</span></div>
+    <div class="stat"><b>31</b><span>CHECK</span></div>
+    <div class="stat"><b>×15,2 / ×20,6</b><span>gains d'index mesurés</span></div>
+  </div>
+  <nav class="toc"><a href="#correspondance">1. Cours ↔ projet</a><a href="#questions">2. Questions probables</a><a href="#reflexes">3. Réflexes à l'oral</a></nav>
+</header>
+
+<section id="correspondance">
+  <span class="kicker">Partie 1</span>
+  <h2>Où chaque notion du cours apparaît dans le projet</h2>
+  <p class="lead">Si le prof cite une notion, il faut savoir montrer où elle est dans le projet, avec le fichier et la ligne. Les lignes en orange signalent ce que nous n'avons pas fait. Il faut savoir le justifier.</p>
+  <div class="tablebox"><table>
+    <thead><tr><th>Notion</th><th>Source</th><th>Dans le projet</th></tr></thead>
+    <tbody id="corr"></tbody>
+  </table></div>
+</section>
+
+<section id="questions">
+  <span class="kicker">Partie 2</span>
+  <h2>Questions individuelles probables</h2>
+  <p class="lead">Mode entraînement : masquez les réponses, lisez la question, répondez à voix haute en moins d'une minute, puis vérifiez. Cochez « je maîtrise » : la case reste cochée dans ce navigateur.</p>
+  <div class="toolbar">
+    <div class="chips" id="themes"></div>
+    <div class="row">
+      <input type="search" id="search" placeholder="Chercher : index, CASCADE, curseur…" aria-label="Chercher une question">
+      <label><input type="checkbox" id="onlyWeak"> Points faibles seulement</label>
+      <label><input type="checkbox" id="hideAns"> Masquer les réponses</label>
+      <label><input type="checkbox" id="hideKnown"> Cacher ce que je maîtrise</label>
+      <span class="progress" id="progress"></span>
+    </div>
+  </div>
+  <div class="qlist" id="qlist"></div>
+</section>
+
+<section id="reflexes">
+  <span class="kicker">Partie 3</span>
+  <h2>Réflexes à l'oral</h2>
+  <div class="cols">
+    <div class="panel"><h3>Structure d'une réponse</h3><ul>
+      <li><b>La notion</b> en une phrase, avec le mot du cours (« moindre privilège », « préfixe gauche », « atomicité »).</li>
+      <li><b>Notre cas</b> : l'objet précis du projet (<code>tr_mouvement_bi</code>, <code>ix_rdv_quai_creneau</code>).</li>
+      <li><b>Le pourquoi</b> : l'alternative qu'on a écartée et la raison.</li>
+      <li><b>La limite</b>, si elle existe, avant que le prof la trouve.</li>
+    </ul></div>
+    <div class="panel"><h3>Si on ne sait pas</h3><ul>
+      <li>Le dire tout de suite, puis raisonner à voix haute à partir de ce qu'on sait (« je n'ai pas mesuré, mais InnoDB fait… donc je m'attends à… »).</li>
+      <li>Proposer comment on vérifierait : <code>EXPLAIN</code>, un test en deux sessions, <code>SHOW GRANTS</code>.</li>
+      <li>Ne jamais inventer un chiffre : les seuls mesurés sont ×15,2 et ×20,6 (rapport de performances).</li>
+    </ul></div>
+    <div class="panel"><h3>À corriger avant le jour J</h3><ul>
+      <li>Le rapport de projet (section 6) annonce ×14 et ×7, alors que le rapport de performances annonce ×15,2 et ×20,6. Il faut aligner les deux documents, sinon le prof le relèvera.</li>
+      <li>Réinstaller la base le matin même : <code>C:\xampp\php\php.exe sql/installer.php</code>.</li>
+      <li>Chacun doit savoir expliquer les parties codées par les autres : la question est individuelle.</li>
+    </ul></div>
+  </div>
+</section>
+</div>
+
+<script>
+const CORR = [
+  ["Diagramme de cas d'utilisation, include / extend, fiches textuelles", "c:Méthodologie", "<code>uml/use_case_entrepot.svg</code> : 8 «include» et 4 «extend». Exemple : «Accueillir un camion sans rendez-vous» étend «Enregistrer l'arrivée» [aucun rendez-vous]. Fiches dans <code>docs/fiches_cas_utilisation.docx</code>."],
+  ["Modèle entité-association (Chen), cardinalités, ternaires", "c:Méthodologie", "<code>uml/diagramme_entite_association.svg</code> : 33 entités et 46 associations, dont 12 N:N et 2 ternaires (Constater → <code>constat_ecart</code>, Prélever → <code>ligne_prelevement</code>)."],
+  ["Passage EA → relationnel : 1:N donne une clé étrangère, N:M donne une table de jointure", "c:Méthodologie", "<code>quai_type_vehicule</code>, <code>zone_condition</code>, <code>quai_equipement</code>, <code>chauffeur_habilitation</code>… La clé primaire est le couple des clés étrangères (<code>01_schema.sql:180</code>). Voir <code>docs/schema_relationnel.docx</code>."],
+  ["Clés candidates, primaires, artificielles, étrangères", "c:Bases relationnelles|t:TD DDL", "Chaque table a un <code>id</code> AUTO_INCREMENT, et la clé métier est gardée en UNIQUE (numéro, SIRET, e-mail). Les tables de jointure ont une clé composée."],
+  ["Formes normales 1FN → BCNF, dénormalisation justifiée", "c:Normalisation", "45 tables en 3FN. Trois dénormalisations assumées, toutes tenues par les déclencheurs : <code>stock.quantite</code>, <code>passage.etape_courante_id</code> et <code>quai.statut</code>. Le tableau de justification est dans le rapport de projet."],
+  ["Héritage UML et ses 3 stratégies de traduction", "c:Méthodologie", "Nous n'avons pas généralisé Tiers (transporteur, client, fournisseur) : leurs attributs et leurs associations diffèrent trop. Ce choix revient à une table par classe concrète, il est justifié dans le rapport."],
+  ["Contraintes d'intégrité CHECK", "c:DDL|t:TD DDL", "31 CHECK, par exemple <code>ck_transporteur_siret</code> avec REGEXP (<code>01_schema.sql:57</code>) et <code>ck_rdv_creneau</code> fin &gt; début (<code>:200</code>)."],
+  ["ON DELETE CASCADE / SET NULL", "c:DDL|t:TD DDL", "19 CASCADE pour les compositions (lignes, étapes, contacts) et 4 SET NULL pour les liens facultatifs (<code>fk_passage_rdv</code>, <code>01_schema.sql:228</code>). Le défaut RESTRICT s'applique à <code>stock</code> : on ne supprime pas un lot qui est encore en stock."],
+  ["Vues", "c:DDL", "5 vues (<code>02_automatisation.sql:588-652</code>) : quais en temps réel, durées des passages, détail du stock, remplissage des zones, DLC proches."],
+  ["Table temporaire", "c:DDL|t:TD Automatisation (CSV)", "<code>tmp_recu</code> dans <code>cloturer_reception</code> (<code>02_automatisation.sql:439</code>) : les quantités reçues sont calculées une fois, puis réutilisées par trois INSERT … SELECT."],
+  ["Fonctions et procédures, DELIMITER, SELECT ou CALL", "c:Automatisation|t:TD Automatisation", "4 fonctions utilisées dans les requêtes (<code>fn_palettes_libres</code>, <code>:40</code>) et 6 procédures appelées par CALL (<code>verifier_rendez_vous</code>, <code>:73</code>)."],
+  ["Déclencheurs BEFORE / AFTER, SIGNAL", "c:Automatisation|t:TD Automatisation", "20 déclencheurs. Les BEFORE contrôlent : <code>tr_mouvement_bi</code> (<code>:330</code>). Les AFTER propagent : <code>tr_mouvement_ai</code> (<code>:385</code>). SIGNAL SQLSTATE '45000' est utilisé 26 fois."],
+  ["Statistiques incrémentales avec ON DUPLICATE KEY UPDATE", "t:TD Automatisation", "<code>tr_mouvement_ai</code> crée ou incrémente la ligne de <code>stock</code> (<code>02_automatisation.sql:396</code>)."],
+  ["Historisation par déclencheurs", "c:Automatisation|t:TD Automatisation (employment_history)", "<code>mouvement_stock</code> est un journal immuable : <code>tr_mouvement_bu</code> et <code>tr_mouvement_bd</code> refusent UPDATE et DELETE (<code>:401-410</code>). <code>passage_etape</code> horodate chaque étape."],
+  ["Curseurs, CONTINUE HANDLER, boucles", "c:Automatisation|t:TD Automatisation (README)", "<code>generer_liste_prelevement</code> (<code>:498</code>) : deux curseurs imbriqués, règle FEFO (DLC la plus proche) puis FIFO."],
+  ["Séquences pour la numérotation des documents", "n:Hors cours, spécifique à MariaDB", "<code>NEXT VALUE FOR seq_mouvement</code> produit MVT-0000001, RDV-…, PAS-… (déclencheurs <code>tr_*_bi</code>, <code>:116-197</code>)."],
+  ["EVENT (tâche planifiée)", "n:Non utilisé|t:TD Automatisation", "Il n'y en a pas. Il faut savoir dire pourquoi et en écrire un (question 23)."],
+  ["Transactions, ACID, COMMIT / ROLLBACK", "c:TCL|t:TD Automatisation", "PDO <code>beginTransaction</code>, <code>commit</code> et <code>rollBack</code> dans 10 pages (<code>www/flux.php:24</code>, <code>reception.php</code>). Chaque INSERT et ses déclencheurs forment un tout atomique."],
+  ["Index B-tree O(log n), index composé, coût des index", "c:Index|t:TD Optimisation", "<code>ix_rdv_quai_creneau (quai_id, debut, fin)</code> donne ×15,2 (<code>01_schema.sql:202</code>). <code>ix_mvt_lot_date</code> donne ×20,6 (<code>:384</code>). Voir <code>docs/rapport_performances.docx</code>."],
+  ["FULLTEXT, MATCH … AGAINST contre LIKE", "c:Index|t:TD Optimisation", "<code>ft_article_designation</code> (<code>01_schema.sql:330</code>) pour la recherche dans le catalogue."],
+  ["Partitionnement", "n:Non utilisé|c:Index", "Il n'y en a pas. Il faut savoir dire pourquoi, et quand ce serait utile (question 32)."],
+  ["GRANT / REVOKE, moindre privilège, liste blanche d'IP", "c:DCL · Administration", "Compte <code>entrepot_app</code> limité à localhost : SELECT et EXECUTE partout, écriture table par table sauf <code>stock</code>, aucun droit de structure (<code>sql/installer.php:897-900</code>)."],
+  ["Hachage des mots de passe", "t:TD DDL (PASSWORD())", "<code>password_hash</code> (bcrypt) et <code>password_verify</code> (<code>www/inscription.php:35</code>, <code>connexion.php:15</code>)."],
+  ["Jointures, agrégats, GROUP BY / HAVING, sous-requêtes", "c:DML|t:TD SQL", "Vues, <code>indicateurs.php</code>, <code>stock.php</code> ; sous-requêtes corrélées et CASE dans <code>v_quai_temps_reel</code>."],
+  ["Client léger, architecture 3-tiers, GET / POST", "c:Architecture web", "Navigateur ↔ PHP 8 + PDO ↔ MariaDB. GET pour consulter, POST + jeton CSRF pour modifier (<code>www/includes/bootstrap.php:138</code>)."],
+];
+
+const Q = [
+ // ---------- Conception
+ {t:"Conception", q:"Pourquoi une clé artificielle (id) plutôt que la clé métier, comme le SIRET ou le numéro de document ?",
+  a:"La clé artificielle est courte, entière et stable : les jointures et les index sont plus légers, et elle ne change jamais. Une clé métier peut changer, par exemple un SIRET après un déménagement ou un numéro reformaté. Avec une clé métier en PK, il faudrait cascader la modification dans toutes les tables filles. On ne perd pas l'unicité métier, car elle reste garantie par une contrainte UNIQUE.",
+  r:"« Alors où est votre clé candidate ? » Les colonnes UNIQUE (numero, siret, email) sont les clés candidates, et l'id est la clé primaire choisie parmi elles.",
+  ref:"sql/01_schema.sql (UNIQUE sur numero, siret, email)"},
+ {t:"Conception", q:"Comment traduisez-vous une association N:N ? Donnez un exemple du projet.",
+  a:"Par une table de jointure. Sa clé primaire est le couple des deux clés étrangères. Exemple : quai_type_vehicule (quai_id, type_vehicule_id) dit quels types de véhicules un quai peut accueillir, et verifier_rendez_vous l'utilise pour refuser un camion incompatible. Si l'association porte des attributs, ils vont dans cette table : la quantité dans ligne_commande, par exemple.",
+  r:"« Et une 1:N ? » La clé étrangère va du côté N (rendez_vous.quai_id).",
+  ref:"sql/01_schema.sql:180 · 02_automatisation.sql:73"},
+ {t:"Conception", q:"Expliquez une de vos deux associations ternaires.",
+  a:"Constater relie une réception, un article et un type d'écart (manquant, excédent, endommagé). Elle devient constat_ecart, avec la clé primaire (reception_id, article_id, type_ecart_id) et une quantité. C'est une vraie ternaire : pour une même réception, un même article peut avoir à la fois un manquant et un endommagé, et deux binaires ne le représentent pas. Prélever relie de la même façon une liste, un lot et un emplacement (ligne_prelevement) : le même lot peut être pris à deux emplacements.",
+  r:"« Comment on vérifie qu'une ternaire est nécessaire ? » On regarde si les projections sur deux binaires permettent de retrouver exactement les triplets. Si on obtient des triplets en trop, elle est nécessaire.",
+  ref:"sql/01_schema.sql:470 (constat_ecart), :528 (ligne_prelevement)"},
+ {t:"Conception", q:"Votre base est en 3FN : donnez un exemple de dépendance que la normalisation vous a fait sortir.",
+  a:"2FN : dans ligne_commande (commande_id, article_id), la désignation et le poids ne dépendent que de article_id. Ils restent dans article, sinon il y aurait une dépendance partielle de la clé. 3FN : la plage de températures dépend de la condition de stockage, pas de l'article. Elle est dans condition_stockage, et article ne porte que condition_stockage_id. Sinon il y aurait une dépendance transitive.",
+  r:"« Et la BCNF ? » Il faut que tout déterminant soit une clé. Pour nos tables, les seuls déterminants sont les clés et les colonnes UNIQUE, donc elles sont aussi en BCNF.",
+  ref:"docs/rapport_projet.docx (normalisation)"},
+ {t:"Conception", w:1, q:"Vous avez dénormalisé : lesquelles, pourquoi, et comment restez-vous cohérents ?",
+  a:"Il y en a trois. stock.quantite pourrait se calculer comme la somme des mouvements. passage.etape_courante_id pourrait se lire dans la dernière ligne de passage_etape. quai.statut pourrait se déduire des passages en cours. On les garde parce qu'elles sont lues en permanence (tableau des quais en temps réel, prélèvement) : recalculer une somme sur tout l'historique à chaque affichage coûterait cher. Elles restent cohérentes parce que seuls les déclencheurs les écrivent, et que le compte du site n'a pas le droit d'écrire dans stock.",
+  r:"« Et si quelqu'un désactive un trigger ? » Le journal mouvement_stock fait foi. On peut recalculer et contrôler le stock avec un SELECT lot_id, emplacement, SUM(±quantite) … GROUP BY, puis le comparer à stock.",
+  ref:"docs/rapport_projet.docx · 02_automatisation.sql:385, :307"},
+ {t:"Conception", q:"Pourquoi ne pas avoir généralisé transporteur, client et fournisseur en une entité Tiers ?",
+  a:"Le cours propose trois traductions de l'héritage : une table unique avec des colonnes NULL, une table par classe concrète, ou une table mère avec des tables filles. Ces trois acteurs ont peu d'attributs communs et des associations très différentes : contrats et chauffeurs pour le transporteur, articles en propriété pour le client. Aucune requête ne les traite ensemble. Une généralisation aurait ajouté des jointures ou des NULL sans rien apporter. C'est donc une table par classe concrète, choix justifié dans le rapport.",
+  r:"« Si demain un fournisseur devient aussi client ? » Ce serait alors le bon moment pour une table mère Tiers : on y ferait remonter SIRET et adresse.",
+  ref:"docs/rapport_projet.docx"},
+ {t:"Conception", q:"Différence entre «include» et «extend» : un exemple de votre diagramme.",
+  a:"«include» : le cas inclus est toujours exécuté. Prendre un rendez-vous inclut toujours Vérifier le créneau et la compatibilité véhicule / quai. «extend» : l'extension n'a lieu que sous une condition, notée entre crochets. Accueillir un camion sans rendez-vous étend Enregistrer l'arrivée [aucun rendez-vous], et Émettre une réserve étend la réception [écart constaté].",
+  r:"« Dans quel sens va la flèche ? » Pour «include», du cas de base vers le cas inclus. Pour «extend», de l'extension vers le cas de base.",
+  ref:"uml/use_case_entrepot.svg"},
+ // ---------- Schéma et contraintes
+ {t:"Schéma", q:"Pourquoi ON DELETE CASCADE à certains endroits et SET NULL à d'autres ?",
+  a:"CASCADE est réservé aux compositions, où l'enfant n'a pas de sens sans son parent : lignes d'un avis ou d'une commande, étapes d'un passage, contacts d'un transporteur. Il y en a 19. SET NULL sert quand le lien est facultatif et que l'enfant a sa propre histoire : si on supprime un rendez-vous, on garde le passage du camion, avec passage.rendez_vous_id à NULL. Il y en a 4. Partout ailleurs, le défaut RESTRICT empêche par exemple de supprimer un lot ou un emplacement qui contient du stock.",
+  r:"« Pourquoi pas CASCADE sur lot → mouvement_stock ? » On effacerait la traçabilité. Le journal est immuable par conception.",
+  ref:"sql/01_schema.sql:228 (SET NULL), :348 (stock sans action)"},
+ {t:"Schéma", q:"Donnez une règle mise en CHECK et une qu'il a fallu mettre dans un déclencheur. Pourquoi cette différence ?",
+  a:"Un CHECK ne porte que sur la ligne en cours : fin > debut pour un rendez-vous, un SIRET de 14 chiffres en REGEXP. Une règle qui doit lire d'autres lignes ou d'autres tables ne peut pas être un CHECK, car un CHECK n'accepte pas de sous-requête. C'est le cas du chevauchement de deux créneaux sur un quai, ou de la capacité restante d'un emplacement. Ces règles sont donc dans un déclencheur BEFORE qui lève SIGNAL.",
+  r:"« Les CHECK sont-ils vraiment appliqués ? » Oui sous MariaDB 10.2+ (et MySQL 8.0.16+). Avant ces versions, ils étaient analysés puis ignorés.",
+  ref:"sql/01_schema.sql:57, :200 · 02_automatisation.sql:73"},
+ {t:"Schéma", q:"ENUM ou table de référence : comment avez-vous choisi ?",
+  a:"ENUM (15 colonnes) pour les listes fermées dont le code dépend : le statut d'un quai (libre, occupé, hors service), le sens (réception, expédition). Table de référence quand la liste est une donnée que l'utilisateur peut faire évoluer, ou qui porte des attributs : condition_stockage avec ses températures, type_vehicule, type_etape avec son ordre.",
+  r:"« Inconvénient de l'ENUM ? » Ajouter une valeur demande un ALTER TABLE, et ce n'est pas du SQL standard.",
+  ref:"sql/01_schema.sql"},
+ // ---------- Requêtes
+ {t:"Requêtes", q:"Écrivez la condition qui détecte le chevauchement de deux créneaux.",
+  a:"r.debut < p_fin AND r.fin > p_debut. Deux intervalles ne se chevauchent pas si l'un finit avant que l'autre commence. On nie cette condition, et la loi de De Morgan donne la conjonction ci-dessus. Les inégalités sont strictes : un rendez-vous qui finit à 10 h et un autre qui commence à 10 h sont compatibles.",
+  r:"« Quel index sert cette requête ? » ix_rdv_quai_creneau (quai_id, debut, fin) : égalité sur quai_id, puis plage sur debut.",
+  ref:"sql/02_automatisation.sql:73"},
+ {t:"Requêtes", q:"Comment calculez-vous le temps d'attente d'un camion sur le site ?",
+  a:"Avec la vue v_passage_durees. fn_date_etape(passage, 'CODE') renvoie l'horodatage d'une étape dans passage_etape, puis TIMESTAMPDIFF(MINUTE, arrivée, appel à quai) donne l'attente. Le temps à quai et l'immobilisation totale se calculent de la même façon. Les indicateurs en font des moyennes avec AVG et GROUP BY.",
+  r:"« Si une étape manque ? » La fonction renvoie NULL, TIMESTAMPDIFF renvoie NULL, et AVG ignore les NULL : un passage en cours ne fausse pas la moyenne.",
+  ref:"sql/02_automatisation.sql:28, :607 · www/indicateurs.php"},
+ {t:"Requêtes", q:"Différence entre WHERE et HAVING ?",
+  a:"WHERE filtre les lignes avant le regroupement et ne peut pas utiliser d'agrégat. HAVING filtre les groupes après GROUP BY, sur un agrégat. Exemple : les articles dont le stock total est sous un seuil s'écrivent SELECT article_id, SUM(quantite) … GROUP BY article_id HAVING SUM(quantite) < 10. Si on peut filtrer dans le WHERE, il faut le faire : il y a moins de lignes à regrouper.",
+  r:"« Ordre logique d'exécution ? » FROM/JOIN → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT.",
+  ref:"Cours DML · TD SQL"},
+ {t:"Requêtes", q:"INNER JOIN ou LEFT JOIN : où le choix compte-t-il dans le projet ?",
+  a:"Un INNER JOIN ne garde que les lignes qui ont une correspondance. Un LEFT JOIN garde toutes les lignes de gauche, avec des NULL à droite. Exemple : un camion sans rendez-vous a passage.rendez_vous_id à NULL. Avec un INNER JOIN vers rendez_vous, il disparaîtrait de la liste des passages, d'où le LEFT JOIN. Dans v_quai_temps_reel, on a utilisé des sous-requêtes corrélées dans le SELECT pour que chaque quai apparaisse une seule fois, même sans camion.",
+  r:"« Comment trouver les emplacements vides ? » emplacement LEFT JOIN stock … WHERE s.lot_id IS NULL. C'est exactement ce que fait l'installeur.",
+  ref:"sql/02_automatisation.sql:588 · sql/installer.php:885"},
+ // ---------- Automatisation
+ {t:"Automatisation", w:1, q:"Le cours conseille d'utiliser les déclencheurs avec parcimonie. Vous en avez 20 : pourquoi ?",
+  a:"Le risque est réel : la logique est cachée, difficile à déboguer, chaque écriture coûte plus cher et les déclencheurs peuvent s'enchaîner. On les réserve à deux usages. D'abord les invariants qui doivent tenir quel que soit le client (site, phpMyAdmin, script d'import) : stock suffisant, capacité, créneaux, ordre des étapes, immuabilité du journal. Ensuite la numérotation des documents. Le reste, comme l'affichage ou les droits par profil, est en PHP. Les messages de SIGNAL sont lisibles et affichés tels quels dans le site, donc une règle violée se comprend.",
+  r:"« Et une procédure appelée par le PHP ? » On l'aurait contournée en écrivant directement dans la table. Le déclencheur, lui, ne peut pas être contourné.",
+  ref:"sql/02_automatisation.sql (20 déclencheurs)"},
+ {t:"Automatisation", q:"BEFORE ou AFTER : comment choisissez-vous ?",
+  a:"BEFORE sert à contrôler ou à modifier NEW avant l'écriture : refuser avec SIGNAL, calculer le numéro de document. AFTER sert à propager une fois la ligne acquise : tr_mouvement_ai met à jour stock. Dans un AFTER, on ne peut plus modifier NEW. Dans un BEFORE, propager serait prématuré, car la ligne peut encore être refusée par une contrainte.",
+  r:"« OLD et NEW ? » En INSERT, seul NEW existe. En DELETE, seul OLD. En UPDATE, les deux.",
+  ref:"sql/02_automatisation.sql:330, :385"},
+ {t:"Automatisation", q:"Si tr_mouvement_ai échoue après l'insertion du mouvement, que devient le mouvement ?",
+  a:"Il est annulé. Avec InnoDB, l'instruction et tous ses déclencheurs forment un seul bloc atomique : une erreur dans le déclencheur AFTER annule aussi l'INSERT. Il ne peut donc pas exister de mouvement sans le stock correspondant.",
+  r:"« Et dans une transaction PHP qui a déjà fait d'autres écritures ? » Seule l'instruction en erreur est annulée. Le catch du PHP fait alors rollBack pour annuler le reste.",
+  ref:"sql/02_automatisation.sql:385 · www/flux.php:24"},
+ {t:"Automatisation", q:"Pourquoi un mouvement de stock ne peut-il être ni modifié ni supprimé ?",
+  a:"C'est de l'historisation, comme employment_history dans le TD. Le journal des mouvements est la preuve de la traçabilité d'un lot (démo : lot L00000066). Une erreur se corrige par un mouvement d'ajustement, comme une écriture d'extourne en comptabilité. tr_mouvement_bu et tr_mouvement_bd lèvent SIGNAL sur tout UPDATE et tout DELETE.",
+  r:"« Un administrateur peut quand même ? » Il pourrait supprimer le déclencheur, mais le compte du site n'a aucun droit de structure.",
+  ref:"sql/02_automatisation.sql:401-410"},
+ {t:"Automatisation", q:"Fonction ou procédure stockée : quelle différence, et un exemple de chaque ?",
+  a:"Une fonction renvoie une seule valeur et s'utilise dans une expression SQL (SELECT, WHERE, déclencheur, vue) : fn_palettes_libres(emplacement) dans tr_mouvement_bi. Une procédure s'appelle avec CALL. Elle peut avoir des paramètres OUT, enchaîner plusieurs instructions, renvoyer des jeux de résultats et gérer une transaction : generer_liste_prelevement(commande, 'FEFO', @liste).",
+  r:"« Pourquoi DELIMITER $$ ? » Le corps contient des ;. Il faut un autre séparateur pour que le client n'envoie pas l'instruction coupée.",
+  ref:"sql/02_automatisation.sql:40, :498"},
+ {t:"Automatisation", w:1, q:"Expliquez le curseur de generer_liste_prelevement. Pourrait-on s'en passer ?",
+  a:"Un curseur externe parcourt les lignes de la commande. Pour chacune, un curseur interne lit le stock de l'article trié par DLC croissante (FEFO), puis par date d'entrée (FIFO). On prend sur chaque emplacement jusqu'à couvrir la quantité demandée et on insère une ligne_prelevement. DECLARE CONTINUE HANDLER FOR NOT FOUND passe un drapeau à vrai quand le curseur est épuisé, ce qui fait sortir de la boucle.",
+  r:"« Sans curseur ? » Oui, en une requête ensembliste avec un cumul : SUM(quantite) OVER (PARTITION BY article ORDER BY dlc, date_entree), puis on garde les lignes dont le cumul précédent est inférieur à la demande. C'est plus rapide. Le curseur est plus lisible pour cette logique gloutonne, et une commande ne contient que quelques lignes.",
+  ref:"sql/02_automatisation.sql:498-560"},
+ {t:"Automatisation", q:"Pourquoi une table temporaire dans cloturer_reception ?",
+  a:"On calcule une seule fois, par article, la quantité reçue et la quantité endommagée. Cela demande des jointures et un GROUP BY. Trois INSERT … SELECT réutilisent ensuite ce résultat pour créer les constats : manquant, excédent, endommagé. La table temporaire n'est visible que par la session et on la supprime en fin de procédure. C'est le même principe que l'import CSV du TD.",
+  r:"« Une vue aurait marché ? » Oui, mais elle serait recalculée trois fois. Une CTE (WITH) ne vit que le temps d'une seule instruction.",
+  ref:"sql/02_automatisation.sql:428-466"},
+ {t:"Automatisation", w:1, q:"Pourquoi des SEQUENCE et pas simplement l'AUTO_INCREMENT pour les numéros ?",
+  a:"L'AUTO_INCREMENT est la clé technique. Le numéro métier (RDV-…, PAS-…, MVT-0000001) a son propre compteur par type de document et il est formaté avec LPAD dans un déclencheur BEFORE INSERT. On peut donc le changer, le préfixer ou le remettre à zéro sans toucher aux clés.",
+  r:"Limites à dire nous-mêmes. CREATE SEQUENCE est propre à MariaDB (10.3+) : le projet ne passe pas tel quel sous MySQL. Une valeur consommée n'est pas rendue en cas de ROLLBACK, donc il peut y avoir des trous dans la numérotation. C'est acceptable ici, ce ne sont pas des factures.",
+  ref:"sql/02_automatisation.sql:116-197"},
+ {t:"Automatisation", w:1, q:"Vous n'utilisez pas d'EVENT : pourquoi ? Où en mettriez-vous un ?",
+  a:"Aucun état n'avait besoin d'une exécution planifiée. Tout se met à jour au fil des événements, par les déclencheurs, et les alertes sont des vues calculées à la lecture (v_lots_proches_dlc). Un EVENT serait utile pour annuler les rendez-vous non honorés, archiver les vieux mouvements ou faire un contrôle nocturne du stock.",
+  code:"SET GLOBAL event_scheduler = ON;\nCREATE EVENT ev_rdv_non_honores\n  ON SCHEDULE EVERY 1 HOUR\n  DO UPDATE rendez_vous SET statut = 'annule'\n     WHERE statut = 'planifie' AND fin < NOW() - INTERVAL 2 HOUR;",
+  r:"« Où est stocké l'EVENT ? » Dans la base. Il faut sauvegarder avec mysqldump --events.",
+  ref:"Cours Automatisation · TD (EVENT toutes les minutes)"},
+ // ---------- Transactions
+ {t:"Transactions", q:"Où utilisez-vous des transactions, et pourquoi ?",
+  a:"Dans le PHP, avec PDO beginTransaction / commit / rollBack, partout où une action écrit plusieurs lignes qui doivent réussir ensemble. Exemple : faire avancer une étape d'un passage (affecter le quai, puis insérer l'étape, puis les déclencheurs mettent à jour le quai et le rendez-vous). Autre exemple : clôturer une réception. Si un SIGNAL lève une exception au milieu, le catch fait rollBack : rien n'est à moitié fait.",
+  r:"« Combien de pages ? » Dix pages du site ouvrent une transaction.",
+  ref:"www/flux.php:24 · www/reception.php"},
+ {t:"Transactions", q:"Illustrez chaque lettre d'ACID avec le projet.",
+  a:"Atomicité : l'avancement d'une étape dans flux.php se fait en tout ou rien. Cohérence : FK, CHECK et déclencheurs refusent tout état invalide (stock négatif, quai occupé deux fois). Isolation : un magasinier ne voit pas les écritures non validées d'un autre ; InnoDB est par défaut en REPEATABLE READ. Durabilité : après COMMIT, le journal redo d'InnoDB fait survivre la donnée à un crash.",
+  r:"« Les quatre niveaux d'isolation ? » READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE, dans l'ordre croissant de protection et décroissant de concurrence.",
+  ref:"Cours TCL"},
+ {t:"Transactions", w:1, q:"Deux magasiniers sortent en même temps le même stock : que se passe-t-il ?",
+  a:"Réponse honnête : le contrôle de tr_mouvement_bi lit le stock sans verrou, car nous n'avons pas de SELECT … FOR UPDATE. Les deux contrôles peuvent donc passer. Un filet de sécurité existe quand même. Le deuxième UPDATE stock attend le verrou de ligne posé par le premier, puis relit la valeur validée. Comme stock.quantite est INT UNSIGNED, une soustraction qui passerait sous zéro lève une erreur en mode strict et annule le deuxième mouvement.",
+  r:"« La correction propre ? » Lire avec SELECT quantite … FOR UPDATE dans le déclencheur, comme dans le README du TD. Même faiblesse et même correction pour deux rendez-vous simultanés sur un quai : verrouiller d'abord la ligne du quai (SELECT … FROM quai WHERE id = ? FOR UPDATE).",
+  ref:"sql/02_automatisation.sql:343-349, :388"},
+ // ---------- Index et performances
+ {t:"Index", q:"Comment avez-vous choisi vos index et mesuré leur effet ?",
+  a:"Avec la méthode du TD Optimisation. On repère les requêtes les plus fréquentes : le contrôle de chevauchement à chaque prise de rendez-vous, l'historique d'un lot pour la traçabilité. On mesure, on ajoute l'index, on mesure à nouveau sur un volume réaliste. ix_rdv_quai_creneau divise le temps par 15,2 et ix_mvt_lot_date par 20,6. On donne le gain absolu et le gain relatif.",
+  r:"« Comment avez-vous mesuré ? » Il faut connaître le protocole du rapport de performances : volume, nombre de répétitions, cache.",
+  ref:"docs/rapport_performances.docx · sql/01_schema.sql:202, :384"},
+ {t:"Index", q:"Pourquoi l'ordre (quai_id, debut, fin) dans ix_rdv_quai_creneau ?",
+  a:"À cause de la règle du préfixe gauche : un index composé s'utilise de gauche à droite. On met d'abord la colonne en égalité (quai_id = ?), puis celle en plage (debut < ?). Après une colonne en plage, les suivantes ne servent plus à filtrer dans l'arbre, mais fin est quand même dans l'index : la condition fin > ? se vérifie sans lire la table. L'index sert aussi à toute recherche sur quai_id seul.",
+  r:"« Et (debut, quai_id) ? » La plage sur debut viendrait en premier, et quai_id ne filtrerait plus dans l'arbre : on parcourrait tous les quais sur la période.",
+  ref:"sql/01_schema.sql:202"},
+ {t:"Index", q:"Pourquoi ne pas indexer toutes les colonnes ?",
+  a:"Chaque index a un coût. Il est mis à jour à chaque INSERT, UPDATE et DELETE, ce qui compte sur mouvement_stock, la table la plus écrite. Il prend de la place et du cache. Et l'optimiseur n'en choisit en général qu'un par table et par requête. On indexe donc ce qui sert les requêtes fréquentes et sélectives. Les clés étrangères ont déjà un index, car InnoDB l'impose.",
+  r:"« Un index sur une colonne booléenne ? » Il est peu sélectif et rarement utile seul.",
+  ref:"Cours Index (coût des index)"},
+ {t:"Index", q:"FULLTEXT avec MATCH … AGAINST, ou LIKE '%mot%' ?",
+  a:"Un LIKE avec un joker au début ne peut pas utiliser un B-tree, car on ne connaît pas le début de la chaîne : la table est parcourue en entier. MATCH(designation) AGAINST('yaourt') utilise l'index inversé ft_article_designation et classe les résultats par pertinence. LIKE 'yaou%' (sans joker initial), lui, utilise un B-tree normal.",
+  r:"« Limites du FULLTEXT ? » Les mots trop courts sont ignorés (innodb_ft_min_token_size vaut 3 par défaut), il y a des mots vides, et pas de recherche à l'intérieur d'un mot.",
+  ref:"sql/01_schema.sql:330 · TD Optimisation"},
+ {t:"Index", q:"Comment vérifier qu'une requête utilise bien un index ?",
+  a:"Avec EXPLAIN devant la requête. Il faut lire type (ALL = parcours complet ; ref ou range = index), key (l'index choisi) et rows (lignes estimées). C'est le plan d'exécution que produit l'optimiseur vu en cours. Piège classique : une fonction sur la colonne indexée empêche l'index. Il faut écrire debut >= '2026-11-19' AND debut < '2026-11-20' plutôt que DATE(debut) = '2026-11-19'.",
+  r:"« EXPLAIN ANALYZE ? » Il exécute vraiment la requête et donne les temps réels. Sous MariaDB, la commande s'appelle ANALYZE SELECT.",
+  ref:"Cours Architecture du SGBDR · TD Optimisation"},
+ {t:"Index", w:1, q:"Pourquoi ne pas avoir partitionné mouvement_stock ?",
+  a:"Le volume d'un entrepôt, quelques centaines de milliers de mouvements par an, tient très bien avec un index composé. Surtout, InnoDB n'accepte pas de clé étrangère sur une table partitionnée : on perdrait l'intégrité référentielle des mouvements vers lot et emplacement. Ce serait pertinent à grande échelle avec PARTITION BY RANGE (YEAR(date_heure)), pour archiver ou supprimer une année d'un coup. Il faudrait alors contrôler les références par déclencheur.",
+  r:"« Le pruning ? » Si le WHERE porte sur la clé de partition, MariaDB ne lit que les partitions concernées.",
+  ref:"Cours Index (partitionnement)"},
+ // ---------- Sécurité et administration
+ {t:"Sécurité", q:"Expliquez le moindre privilège dans votre projet.",
+  a:"Le site se connecte avec le compte entrepot_app, et non avec root. Il a SELECT et EXECUTE sur toute la base, et INSERT, UPDATE, DELETE table par table, sauf sur stock. Il n'a aucun droit de structure (CREATE, ALTER, DROP) ni GRANT. Le compte n'existe que pour localhost et 127.0.0.1, ce qui joue le rôle de la liste blanche d'IP du cours. Les déclencheurs peuvent quand même écrire dans stock, car ils s'exécutent avec les droits de leur DEFINER.",
+  r:"« Comment le vérifier ? » SHOW GRANTS FOR 'entrepot_app'@'localhost'; et essayer un UPDATE stock avec ce compte : refusé.",
+  ref:"sql/installer.php:893-901 (droits), :30-31 (compte)"},
+ {t:"Sécurité", q:"Comment vous protégez-vous de l'injection SQL ?",
+  a:"Toutes les requêtes qui reçoivent une saisie sont préparées avec PDO, avec des paramètres ? : la valeur n'est jamais interprétée comme du SQL. On ne concatène jamais une saisie dans une requête. Les seules concaténations sont dans l'installeur (noms de tables lus dans information_schema), sans donnée utilisateur. Et le moindre privilège limite les dégâts si une faille passait.",
+  r:"« Les requêtes préparées protègent-elles aussi des XSS ? » Non. Ce sont deux attaques différentes : contre le XSS, on échappe à l'affichage avec e(), c'est-à-dire htmlspecialchars.",
+  ref:"www/includes/bootstrap.php:160 (e)"},
+ {t:"Sécurité", q:"Comment stockez-vous les mots de passe ? Pourquoi pas PASSWORD() comme au TD ?",
+  a:"password_hash(…, PASSWORD_DEFAULT) produit du bcrypt avec un sel aléatoire et un coût réglable, et password_verify fait la vérification. PASSWORD() de MySQL est un double SHA-1 sans sel : deux mots de passe identiques donnent le même hash, et il se casse vite. La fonction a été retirée de MySQL 8. En hachant côté PHP, le mot de passe en clair n'apparaît pas non plus dans les requêtes ni dans les journaux SQL.",
+  r:"« Le usleep de connexion.php ? » Une demi-seconde de délai après un échec ralentit la force brute. Ce n'est pas un verrouillage de compte.",
+  ref:"www/inscription.php:35 · www/connexion.php:15-16"},
+ {t:"Sécurité", q:"Les droits par profil sont-ils vérifiés côté serveur ?",
+  a:"Oui. Les 31 pages protégées appellent exiger_connexion() ou exiger_profil(…) en PHP avant tout traitement. Masquer un bouton ne suffit pas, car une requête POST peut être forgée. Chaque formulaire POST porte en plus un jeton CSRF (champ_csrf / verifier_csrf) : un site tiers ne peut donc pas faire agir un utilisateur connecté à son insu.",
+  r:"« Un chauffeur peut-il voir les rendez-vous d'un autre transporteur ? » Non : utilisateur.transporteur_id filtre ses requêtes.",
+  ref:"www/includes/bootstrap.php:105, :138"},
+ {t:"Sécurité", w:1, q:"Quelles sont les limites de sécurité de votre application ?",
+  a:"Il faut les dire avant qu'on nous les demande. Il n'y a pas de HTTPS en local (indispensable en production). Il n'y a pas de verrouillage de compte après plusieurs échecs, seulement un délai. Le mot de passe du compte applicatif est écrit en clair dans installer.php et config.php, qui sont versionnés. Il n'y a pas de journal des connexions. Les améliorations correspondantes : HTTPS, compteur d'échecs et blocage temporaire, secret hors du dépôt (variable d'environnement), table de journal alimentée par la connexion.",
+  r:"« Et la fixation de session ? » C'est déjà traité : connexion.php appelle session_regenerate_id(true) à la connexion.",
+  ref:"www/connexion.php:16, :21 · sql/installer.php:31 · www/config.php"},
+ {t:"Sécurité", q:"Comment sauvegarder et restaurer la base ?",
+  a:"mysqldump --routines --triggers --events entrepot > sauvegarde.sql. Sans --routines, on perd les procédures et les fonctions, qui sont une bonne partie du projet. La restauration se fait par mysql entrepot < sauvegarde.sql, et les comptes se recréent avec l'installeur. Le cours ajoute la redondance : réplication vers un serveur secondaire, sauvegardes régulières stockées ailleurs.",
+  r:"« Une sauvegarde à chaud cohérente ? » mysqldump --single-transaction lit un instantané InnoDB sans bloquer les écritures.",
+  ref:"Cours Administration"},
+ // ---------- Architecture
+ {t:"Architecture", q:"Décrivez l'architecture de l'application.",
+  a:"C'est une architecture 3-tiers avec client léger. Le navigateur n'affiche que du HTML et du CSS. PHP 8 gère les sessions, les droits et la présentation. MariaDB porte les données et les règles métier : contraintes, déclencheurs, procédures. On utilise GET pour consulter (sans effet de bord, peut être mis en favori) et POST pour modifier, avec un jeton CSRF. Il n'y a ni framework MVC ni ORM comme Spring dans le cours : le SQL est écrit à la main, ce qui le rend visible et adapté à un projet de BD.",
+  r:"« Pourquoi pas un ORM ? » Il aurait masqué le SQL qu'on veut justement montrer, et nos règles sont dans la base, pas dans des objets.",
+  ref:"Cours Client léger / 3-tiers"},
+ {t:"Architecture", q:"Pourquoi mettre la logique métier dans la base plutôt que dans le PHP ?",
+  a:"Les invariants tiennent quel que soit le client : site, phpMyAdmin ou script d'import. On les écrit une seule fois, et les données ne peuvent pas devenir incohérentes. Il y a des contreparties : la portabilité (MariaDB), des tests plus difficiles, et des montées de version à gérer. On les limite en versionnant les scripts SQL (01_schema.sql, 02_automatisation.sql) dans git, et avec un installeur qui reconstruit tout.",
+  r:"« Et pour tester ? » Le script de démo couvre chaque refus : quai incompatible, emplacement en surcharge, stock insuffisant.",
+  ref:"sql/ · soutenance/script_demo.html"},
+];
+
+const THEMES = ["Tout", ...new Set(Q.map(x => x.t))];
+const $ = s => document.querySelector(s);
+const store = { get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } },
+                set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} } };
+let known = new Set(store.get("bd70-known") || []);
+let theme = "Tout";
+
+function tags(src){
+  return src.split("|").map(s => { const [k, v] = s.split(":"); const cls = k === "c" ? "t-cours" : k === "t" ? "t-td" : "t-non";
+    const lab = k === "c" ? "Cours · " : k === "t" ? "" : ""; return `<span class="tag ${cls}">${lab}${v}</span>`; }).join("");
+}
+$("#corr").innerHTML = CORR.map(([n, s, p]) => `<tr${s.startsWith("n:") ? ' style="background:var(--warn-soft)"' : ''}><td>${n}</td><td class="src">${tags(s)}</td><td>${p}</td></tr>`).join("");
+
+$("#themes").innerHTML = THEMES.map(t => `<button class="chip" aria-pressed="${t === theme}" data-t="${t}">${t}${t === "Tout" ? "" : " · " + Q.filter(x => x.t === t).length}</button>`).join("");
+$("#themes").addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; theme = b.dataset.t;
+  document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c.dataset.t === theme)); render(); });
+
+const esc = s => s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function render(){
+  const term = $("#search").value.trim().toLowerCase(), weak = $("#onlyWeak").checked, hide = $("#hideAns").checked, hk = $("#hideKnown").checked;
+  const items = Q.map((x, i) => ({...x, i})).filter(x => (theme === "Tout" || x.t === theme) && (!weak || x.w) && (!hk || !known.has(x.i))
+    && (!term || (x.q + x.a + x.r + x.ref + (x.code || "")).toLowerCase().includes(term)));
+  $("#qlist").innerHTML = items.length ? items.map(x => `
+    <article class="q${x.w ? " weak" : ""}${known.has(x.i) ? " known" : ""}" data-i="${x.i}">
+      <div class="qhead"><span class="qnum">Q${x.i + 1}</span><span class="qtext">${esc(x.q)}</span>
+        <label class="known-box"><input type="checkbox" data-k="${x.i}"${known.has(x.i) ? " checked" : ""}> je maîtrise</label></div>
+      <div class="meta"><span class="tag t-cours">${x.t}</span>${x.w ? '<span class="tag t-non">point faible</span>' : ""}</div>
+      ${hide ? `<div class="answer"><button class="btn reveal" data-r="${x.i}">Voir la réponse</button></div>` : answer(x)}
+    </article>`).join("") : '<p class="empty">Aucune question ne correspond.</p>';
+  $("#progress").textContent = `${known.size} / ${Q.length} maîtrisées`;
+}
+function answer(x){
+  return `<div class="answer"><p>${esc(x.a)}</p>${x.code ? `<pre>${esc(x.code)}</pre>` : ""}
+    <div class="relance"><b>Relance probable</b> — ${esc(x.r)}</div><div class="ref mono">↳ ${esc(x.ref)}</div></div>`;
+}
+$("#qlist").addEventListener("click", e => { const b = e.target.closest(".reveal"); if (!b) return;
+  b.parentElement.outerHTML = answer(Q[+b.dataset.r]); });
+$("#qlist").addEventListener("change", e => { const k = e.target.dataset.k; if (k === undefined) return;
+  e.target.checked ? known.add(+k) : known.delete(+k); store.set("bd70-known", [...known]); render(); });
+["#search", "#onlyWeak", "#hideAns", "#hideKnown"].forEach(s => $(s).addEventListener("input", render));
+
+const j = Math.ceil((new Date(2026, 10, 19) - new Date().setHours(0,0,0,0)) / 864e5);
+$("#jours").textContent = j > 0 ? `J-${j} (19/11/2026, date approximative)` : j === 0 ? "C'est aujourd'hui" : "Soutenance passée";
+render();
+</script>
