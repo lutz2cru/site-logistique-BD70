@@ -1,0 +1,315 @@
+<title>Démo Entrepôt BD70</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=Public+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout : une colonne de lecture ; chaque scène = un bloc avec sa fenêtre horaire à gauche, comme une feuille de route de quai. */
+:root {
+  --paper: #F4F5F1; --surface: #FFFFFF; --ink: #14213D; --muted: #4A5568; --line: #D7DAD2;
+  --accent: #E8772E; --accent-ink: #A9500F; --on-accent: #14213D; --ok: #2F7D4F; --code-bg: #ECEEE8;
+  --display: 'Oswald', 'Arial Narrow', Arial, sans-serif;
+  --body: 'Public Sans', Arial, sans-serif;
+  --mono: 'JetBrains Mono', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0F1830; --surface: #17223F; --ink: #E9ECF2; --muted: #A9B3C4; --line: #2B3756;
+  --accent: #F0904A; --accent-ink: #F3A066; --on-accent: #14213D; --ok: #6CC495; --code-bg: #1E2A4A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #0F1830; --surface: #17223F; --ink: #E9ECF2; --muted: #A9B3C4; --line: #2B3756;
+  --accent: #F0904A; --accent-ink: #F3A066; --on-accent: #14213D; --ok: #6CC495; --code-bg: #1E2A4A; color-scheme: dark }
+
+body { background: var(--paper); color: var(--ink); font: 16px/1.6 var(--body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--ink); }
+.wrap { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; display: flex; flex-direction: column; gap: 40px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(32px, 6vw, 48px); text-transform: uppercase; letter-spacing: .5px; }
+h2 { font-size: 26px; text-transform: uppercase; letter-spacing: .5px; }
+h3 { font-size: 21px; }
+p { margin: 0; }
+code, .mono { font-family: var(--mono); font-size: .88em; background: var(--code-bg); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+.eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-ink); }
+.muted { color: var(--muted); }
+
+/* Barre chrono */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--ink); color: var(--paper); }
+.bar-in { max-width: 920px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.clock { font-family: var(--mono); font-size: 28px; font-variant-numeric: tabular-nums; min-width: 4.5ch; }
+.clock.over { color: var(--accent); }
+.now { flex: 1; min-width: 180px; font-size: 14px; opacity: .9; }
+.bar button { font: 600 14px var(--body); border: 1px solid currentColor; background: transparent; color: inherit; border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+.bar button.go { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+header.top { padding-top: 40px; display: flex; flex-direction: column; gap: 14px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: 15px; }
+.facts b { font-weight: 700; }
+
+/* Fenêtres */
+.windows { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.win { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.win .n { font-family: var(--display); font-size: 15px; color: var(--accent-ink); letter-spacing: 1px; text-transform: uppercase; }
+.win small { color: var(--muted); font-size: 14px; }
+
+/* Checklist */
+.check { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.check li { border-bottom: 1px solid var(--line); }
+.check label { display: flex; gap: 12px; align-items: flex-start; padding: 12px 4px; cursor: pointer; }
+.check input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--ok); flex: none; }
+.check .t { min-width: 0; }
+.check input:checked + .t { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.warn { border-left: 4px solid var(--accent); background: var(--surface); padding: 14px 18px; border-radius: 0 8px 8px 0; display: flex; flex-direction: column; gap: 6px; }
+
+/* Scènes */
+.scenes { display: flex; flex-direction: column; gap: 0; border-top: 2px solid var(--ink); }
+.scene { display: grid; grid-template-columns: 112px 1fr; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--line); transition: background .2s; }
+.scene.live { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.when { display: flex; flex-direction: column; gap: 6px; }
+.when .t { font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.pill { align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.pill.w1 { border-color: var(--accent-ink); color: var(--accent-ink); }
+.pill.w2 { border-color: var(--ok); color: var(--ok); }
+.body { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.steps { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.say { border-left: 3px solid var(--ink); padding: 2px 0 2px 14px; font-style: italic; }
+.why { font-size: 14px; color: var(--muted); }
+.why b { color: var(--ink); font-style: normal; }
+.ui { font-weight: 700; }
+.expect { font-size: 15px; }
+.expect::before { content: "Attendu : "; font-weight: 700; color: var(--ok); }
+
+/* Q/R */
+.qa { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.qa div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.qa b { font-size: 15px; }
+.qa p { font-size: 15px; color: var(--muted); }
+section { display: flex; flex-direction: column; gap: 16px; }
+ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+
+@media (max-width: 560px) {
+  .scene { grid-template-columns: 1fr; gap: 10px; }
+  .when { flex-direction: row; align-items: center; gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .scene { transition: none; } }
+</style>
+
+<div class="bar" role="region" aria-label="Chronomètre de répétition">
+  <div class="bar-in">
+    <span class="clock" id="clock">0:00</span>
+    <span class="now" id="now">Chronomètre de répétition : 5 min de démo</span>
+    <button id="start" class="go" type="button">Démarrer</button>
+    <button id="reset" type="button">Remettre à zéro</button>
+  </div>
+</div>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Soutenance BD70 · partie démonstration</span>
+  <h1>Script de démo : suivre un camion</h1>
+  <p class="muted">Un camion de réception, du rendez-vous jusqu’au rangement de sa marchandise, puis la traçabilité d’un lot et les indicateurs. Chaque scène prouve qu’une règle métier est tenue <b>par la base</b>, pas seulement par le PHP.</p>
+  <div class="facts">
+    <span><b>Durée</b> 5 min</span>
+    <span><b>Site</b> <span class="mono">http://localhost:8080</span></span>
+    <span><b>Mot de passe commun</b> <span class="mono">demo1234</span></span>
+  </div>
+</header>
+
+<section aria-labelledby="h-fen">
+  <h2 id="h-fen">Trois fenêtres déjà connectées</h2>
+  <p class="muted">Une session PHP par navigateur : on ne se déconnecte jamais pendant la démo, on change de fenêtre.</p>
+  <div class="windows">
+    <div class="win"><span class="n">Fenêtre 1</span><b>Agent d’accueil</b><span class="mono">accueil@entrepot.test</span><small>navigateur normal</small></div>
+    <div class="win"><span class="n">Fenêtre 2</span><b>Magasinier</b><span class="mono">magasinier@entrepot.test</span><small>fenêtre de navigation privée</small></div>
+    <div class="win"><span class="n">Fenêtre 3</span><b>Responsable</b><span class="mono">responsable@entrepot.test</span><small>un autre navigateur</small></div>
+  </div>
+</section>
+
+<section aria-labelledby="h-prep">
+  <h2 id="h-prep">Avant de passer</h2>
+  <div class="warn">
+    <b>Réinstaller la base le matin même.</b>
+    <p>L’installateur date l’activité simulée par rapport à l’heure d’installation. Une base installée la veille affiche des camions « sur site depuis 17 h » et 70 rendez-vous en retard (constaté en répétition le 05/11). Les codes (lots, avis, véhicules) restent les mêmes à chaque installation, car la génération utilise une graine fixe.</p>
+  </div>
+  <ul class="check" id="check">
+    <li><label><input type="checkbox" id="c1"><span class="t">Démarrer MySQL dans XAMPP, puis lancer <code>C:\xampp\php\php.exe sql/installer.php</code> (environ 1 min 30).</span></label></li>
+    <li><label><input type="checkbox" id="c2"><span class="t">Lancer le site : <code>C:\xampp\php\php.exe -S localhost:8080 -t www</code>.</span></label></li>
+    <li><label><input type="checkbox" id="c3"><span class="t">Ouvrir les 3 fenêtres et s’y connecter. Zoom navigateur à 125 % pour le vidéoprojecteur.</span></label></li>
+    <li><label><input type="checkbox" id="c4"><span class="t">Repérer pour la scène 2 un quai déjà réservé <b>demain</b> (Planning des quais, flèche →) et noter son créneau.</span></label></li>
+    <li><label><input type="checkbox" id="c5"><span class="t">Repérer pour la scène 3 un rendez-vous <b>Réception</b> encore à venir dans « Rendez-vous attendus aujourd’hui ».</span></label></li>
+    <li><label><input type="checkbox" id="c6"><span class="t">Repérer pour la scène 4 un avis d’expédition attendu avec des articles <b>ambiants</b> (la zone produits dangereux est presque pleine).</span></label></li>
+    <li><label><input type="checkbox" id="c7"><span class="t">Garder le rapport de projet ouvert (captures d’écran) comme plan B.</span></label></li>
+  </ul>
+</section>
+
+<section aria-labelledby="h-sc">
+  <h2 id="h-sc">Le déroulé</h2>
+  <div class="scenes" id="scenes">
+
+    <article class="scene" data-from="0" data-to="25">
+      <div class="when"><span class="t">0:00–0:25</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="body">
+        <h3>1 · Tableau de bord de l’accueil</h3>
+        <ol class="steps">
+          <li>Montrer la page d’accueil déjà ouverte : indicateurs du jour, état des quais, camions sur site.</li>
+          <li>Pointer le menu : il ne contient que ce que l’agent d’accueil a le droit de faire.</li>
+        </ol>
+        <p class="say">« L’agent d’accueil voit l’état des seize quais en temps réel. Le statut “réservé” est calculé par une vue à partir des rendez-vous. »</p>
+        <p class="why"><b>Notions :</b> vue <code>v_quai_temps_reel</code>, agrégations (COUNT, SUM), droits par profil contrôlés côté serveur.</p>
+      </div>
+    </article>
+
+    <article class="scene" data-from="25" data-to="75">
+      <div class="when"><span class="t">0:25–1:15</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="body">
+        <h3>2 · Un rendez-vous qui chevauche est refusé</h3>
+        <ol class="steps">
+          <li><span class="ui">Quais et rendez-vous › Planning des quais</span>, flèche <span class="ui">→</span> pour demain : montrer le quai réservé repéré.</li>
+          <li><span class="ui">+ Nouveau rendez-vous</span> : un véhicule, sens Réception, date de demain, une heure dans ce créneau.</li>
+          <li>Choisir <b>directement ce quai</b> dans la liste Quai, puis <span class="ui">Enregistrer</span>.</li>
+          <li>La page propose alors les quais compatibles et libres : en cocher un, <span class="ui">Enregistrer</span>.</li>
+        </ol>
+        <p class="expect">« Ce créneau chevauche un autre rendez-vous sur ce quai. », puis la liste des quais libres (testé : Q03, Q05, Q06, Q16).</p>
+        <p class="say">« Le refus vient d’un déclencheur. Même une insertion directe en SQL serait refusée. La liste proposée applique la compatibilité entre le type de véhicule et le quai. »</p>
+        <p class="why"><b>Notions :</b> déclencheur BEFORE INSERT avec SIGNAL, index composite <code>ix_rdv_quai_creneau</code> (×15), jointure Véhicule → Type de véhicule ← Accepter ← Quai, sous-requête NOT EXISTS.</p>
+      </div>
+    </article>
+
+    <article class="scene" data-from="75" data-to="120">
+      <div class="when"><span class="t">1:15–2:00</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="body">
+        <h3>3 · Le camion arrive et passe les étapes</h3>
+        <ol class="steps">
+          <li><span class="ui">Flux de camions › Camions sur site</span>, tableau « Rendez-vous attendus aujourd’hui » : <span class="ui">Enregistrer l’arrivée</span> sur le RDV repéré.</li>
+          <li>Montrer le badge <b>À l’heure / Retard / En avance</b>, choisir le chauffeur, <span class="ui">Enregistrer l’arrivée</span>.</li>
+          <li>Dans sa ligne : <span class="ui">Documents contrôlés</span>, puis <span class="ui">Mettre en attente</span>, puis <span class="ui">Appeler à quai</span> (le quai du rendez-vous est proposé en premier).</li>
+        </ol>
+        <p class="expect">un message vert horodaté à chaque étape, et la colonne « Action suivante » qui change.</p>
+        <p class="say">« Chaque clic horodate une étape. Les temps d’attente et d’immobilisation se calculent ensuite par différence. Le début du déchargement n’est pas proposé ici : c’est le rôle du magasinier. »</p>
+        <p class="why"><b>Notions :</b> association N:N <code>passage_etape</code> qui porte l’horodatage, déclencheur sur l’ordre des étapes et la disponibilité du quai, statut du quai mis à jour automatiquement.</p>
+      </div>
+    </article>
+
+    <article class="scene" data-from="120" data-to="200">
+      <div class="when"><span class="t">2:00–3:20</span><span class="pill w2">Fenêtre 2</span></div>
+      <div class="body">
+        <h3>4 · Réception : la base calcule les écarts</h3>
+        <ol class="steps">
+          <li><span class="ui">Camions sur site</span> : <span class="ui">Début déchargement</span> sur le camion.</li>
+          <li><span class="ui">Réception › Réceptions</span>, « Camions à quai à réceptionner » : choisir l’avis repéré, <span class="ui">Démarrer la réception</span>.</li>
+          <li>Montrer le tableau <b>Attendu / reçu</b>. Saisir un lot avec la quantité attendue, puis un second lot <b>en dessous</b> de l’attendu (<span class="ui">Ajouter le lot</span>).</li>
+          <li><span class="ui">Clôturer la réception</span> et confirmer.</li>
+        </ol>
+        <p class="expect">« Réception clôturée : 1 écart(s) détecté(s) par rapport à l’avis. » et une ligne <b>Manquant</b> dans « Écarts constatés » (testé : 300 reçus sur 348 → 48 manquants).</p>
+        <p class="say">« Le calcul des écarts est dans une procédure stockée. Un écart est une association ternaire : un même article peut être à la fois manquant et endommagé dans une réception. »</p>
+        <p class="why"><b>Notions :</b> procédure <code>cloturer_reception</code>, ternaire Constater → table <code>constat_ecart</code> (clé composée), Lot distinct d’Article, contrôle de saisie (DLC obligatoire pour le frais).</p>
+      </div>
+    </article>
+
+    <article class="scene" data-from="200" data-to="235">
+      <div class="when"><span class="t">3:20–3:55</span><span class="pill w2">Fenêtre 2</span></div>
+      <div class="body">
+        <h3>5 · Rangement : la compatibilité produit / zone</h3>
+        <ol class="steps">
+          <li>Dans « Lots reçus », <span class="ui">Ranger</span> sur un lot ambiant : montrer les emplacements proposés.</li>
+          <li>Taper dans « Ou code d’emplacement » <code>SUR-A01-R01-N1-P1</code> (zone surgelés), <span class="ui">Valider</span> : refus.</li>
+          <li>Vider le code, garder l’emplacement proposé, <span class="ui">Valider</span>.</li>
+        </ol>
+        <p class="expect">« La zone de destination n’est pas compatible avec les conditions de stockage de l’article. », puis « … unités du lot … rangées en AMB-… ».</p>
+        <p class="say">« Le stock n’est jamais saisi : il est recalculé par déclencheur à chaque mouvement, et un mouvement ne se supprime pas. »</p>
+        <p class="why"><b>Notions :</b> procédure <code>proposer_emplacements</code> (la requête la plus lente, 32 ms), fonctions de capacité, table <code>mouvement_stock</code> immuable, moindre privilège (le site ne peut pas écrire dans <code>stock</code>).</p>
+      </div>
+    </article>
+
+    <article class="scene" data-from="235" data-to="270">
+      <div class="when"><span class="t">3:55–4:30</span><span class="pill w2">Fenêtre 2</span></div>
+      <div class="body">
+        <h3>6 · Traçabilité complète d’un lot</h3>
+        <ol class="steps">
+          <li><span class="ui">Stocks › Traçabilité d’un lot</span>, saisir <code>L00000066</code>, <span class="ui">Tracer</span>.</li>
+          <li>Descendre les 4 parties : réception, emplacements successifs, prélèvements, expédition.</li>
+        </ol>
+        <p class="expect">réception REC-000028, un transfert entre deux emplacements, 3 commandes (FIFO et FEFO), 3 camions avec leurs BL et lettres de voiture.</p>
+        <p class="say">« C’est la demande du sujet : retrouver un lot de sa réception jusqu’au camion qui l’a emporté. Tout est reconstitué par jointures, rien n’est recopié. »</p>
+        <p class="why"><b>Notions :</b> chaîne de jointures sur les clés étrangères, ternaire Prélever → <code>ligne_prelevement</code>, index <code>ix_mvt_lot_date</code> (×20).</p>
+      </div>
+    </article>
+
+    <article class="scene" data-from="270" data-to="300">
+      <div class="when"><span class="t">4:30–5:00</span><span class="pill">Fenêtre 3</span></div>
+      <div class="body">
+        <h3>7 · Indicateurs du responsable</h3>
+        <ol class="steps">
+          <li><span class="ui">Pilotage › Indicateurs</span> : les 8 chiffres clés et les 4 graphiques.</li>
+          <li>Montrer le tableau d’attente et d’immobilisation par transporteur, puis <span class="ui">Imprimer le rapport</span>.</li>
+        </ol>
+        <p class="say">« Aucun indicateur n’est stocké : ils sont calculés à la demande sur la période choisie. Merci, nous sommes prêts pour vos questions. »</p>
+        <p class="why"><b>Notions :</b> GROUP BY, AVG, TIMESTAMPDIFF, vues <code>v_passage_durees</code> et <code>v_remplissage_zone</code>, génération d’états.</p>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<section aria-labelledby="h-b">
+  <h2 id="h-b">Si quelque chose casse</h2>
+  <ul class="plain">
+    <li><b>En retard sur le chrono :</b> couper la scène 5 (rangement), puis la scène 1.</li>
+    <li><b>Une étape renvoie une erreur imprévue :</b> lire le message à voix haute (c’est souvent une règle de la base qui joue), puis montrer une réception déjà clôturée dans <span class="ui">Réceptions</span> ou un passage dans <span class="ui">Historique des passages</span>.</li>
+    <li><b>Le site ne démarre pas :</b> passer aux captures du rapport de projet, section 7.</li>
+    <li><b>Si on vous demande les droits :</b> se connecter en <span class="mono">transporteur@entrepot.test</span>, qui ne voit que ses propres rendez-vous.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="h-q">
+  <h2 id="h-q">Questions probables pendant la démo</h2>
+  <div class="qa">
+    <div><b>Et si on insère directement en SQL ?</b><p>Les déclencheurs refusent l’insertion de la même façon : la règle ne dépend pas du site.</p></div>
+    <div><b>Pourquoi le stock n’est pas saisi à la main ?</b><p>C’est une synthèse des mouvements, tenue par déclencheur. Le compte du site n’a pas le droit d’y écrire.</p></div>
+    <div><b>Pourquoi le passage est séparé du rendez-vous ?</b><p>L’un est prévu, l’autre réel : c’est ce qui permet de mesurer les retards et d’accueillir un camion sans rendez-vous.</p></div>
+    <div><b>Les indicateurs sont-ils stockés ?</b><p>Non, ils sont recalculés depuis les étapes horodatées, les constats et les listes. Rien à resynchroniser.</p></div>
+  </div>
+</section>
+</div>
+
+<script>
+(function () {
+  // Checklist : mémorisée dans ce navigateur seulement
+  const KEY = 'demo-bd70-check';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  document.querySelectorAll('#check input').forEach(function (cb) {
+    cb.checked = !!saved[cb.id];
+    cb.addEventListener('change', function () {
+      saved[cb.id] = cb.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+    });
+  });
+
+  // Chronomètre de répétition : met en évidence la scène en cours
+  const clock = document.getElementById('clock'), now = document.getElementById('now');
+  const startBtn = document.getElementById('start'), resetBtn = document.getElementById('reset');
+  const scenes = Array.from(document.querySelectorAll('.scene'));
+  let t0 = null, acc = 0, timer = null;
+  function fmt(s) { return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0'); }
+  function render() {
+    const s = acc + (t0 ? (Date.now() - t0) / 1000 : 0);
+    clock.textContent = fmt(s);
+    clock.classList.toggle('over', s > 300);
+    let cur = null;
+    scenes.forEach(function (sc) {
+      const live = (t0 || acc) && s >= +sc.dataset.from && s < +sc.dataset.to;
+      sc.classList.toggle('live', !!live);
+      if (live) cur = sc;
+    });
+    if (s > 300) now.textContent = 'Temps dépassé de ' + fmt(s - 300);
+    else if (cur) now.textContent = cur.querySelector('h3').textContent + ' · fin à ' + fmt(+cur.dataset.to);
+    else now.textContent = 'Chronomètre de répétition : 5 min de démo';
+  }
+  startBtn.addEventListener('click', function () {
+    if (t0) { acc += (Date.now() - t0) / 1000; t0 = null; clearInterval(timer); startBtn.textContent = 'Reprendre'; }
+    else { t0 = Date.now(); timer = setInterval(render, 250); startBtn.textContent = 'Pause'; }
+    render();
+  });
+  resetBtn.addEventListener('click', function () {
+    t0 = null; acc = 0; clearInterval(timer); startBtn.textContent = 'Démarrer'; render();
+  });
+})();
+</script>

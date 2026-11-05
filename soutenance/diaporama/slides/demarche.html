@@ -1,0 +1,31 @@
+<section id="demarche" data-transition="fade" style="background:#F6F4EE;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B85A1C;font-weight:700">Démarche</p>
+<h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Quatre modèles qui décrivent le même périmètre</h2>
+</div>
+<div style="display:flex;gap:24px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#EAE6DC;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#B85A1C;line-height:1">01</p>
+<h3 style="font-size:32px;font-weight:700">Cas d’utilisation</h3>
+<p style="font-size:24px;line-height:1.45;color:#3A4558">Une phrase du sujet = un cas. 5 acteurs, include / extend</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#EAE6DC;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#B85A1C;line-height:1">02</p>
+<h3 style="font-size:32px;font-weight:700">Entité-association</h3>
+<p style="font-size:24px;line-height:1.45;color:#3A4558">33 entités, 46 associations dont 12 N:N et 2 ternaires</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#EAE6DC;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#B85A1C;line-height:1">03</p>
+<h3 style="font-size:32px;font-weight:700">Schéma relationnel</h3>
+<p style="font-size:24px;line-height:1.45;color:#3A4558">45 tables en 3NF, clés métier en UNIQUE, contraintes CHECK</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#14213D;color:#F6F4EE;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#E8772E;line-height:1">04</p>
+<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Base + site</h3>
+<p style="font-size:24px;line-height:1.45;color:#D5DBE5">Déclencheurs, procédures, vues, puis une page PHP par écran</p>
+</div>
+</div>
+<p style="font-size:32px;line-height:1.4;color:#3A4558">Vérification dans les deux sens : chaque cas s’appuie sur le modèle, et chaque entité sert au moins un cas.</p>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#5A6474">Livrables : uml/use_case_entrepot.svg · uml/diagramme_entite_association.svg · uml/schema_relationnel.svg</p>
+<aside>[Orateur 2] Notre démarche a suivi le cours : d’abord les cas d’utilisation, en relisant le sujet phrase par phrase, puis le modèle entité-association — 33 entités et 46 associations — puis sa traduction en 45 tables en troisième forme normale. Les N:N deviennent des tables de jointure, les identifiants métier (SIRET, immatriculation) sont déclarés UNIQUE, et chaque table a une clé artificielle id. Enfin la base, avec son automatisation, et le site. Nous avons vérifié la cohérence dans les deux sens : aucun élément du modèle ne sort du périmètre. (≈ 40 s)</aside>
+</section>
