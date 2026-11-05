@@ -1,0 +1,39 @@
+<section id="automatisation" data-transition="fade" style="background:#14213D;color:#F6F4EE;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<div style="display:flex;flex-direction:column;gap:12px">
+<p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#E8772E;font-weight:700">Automatisation dans la base</p>
+<h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1;color:#F6F4EE">Une règle écrite une fois, appliquée par tous les chemins d’écriture</h2>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:4px;border-top:2px solid #3D4C6B;padding:24px 0 0 0">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#E8772E">20</p>
+<p style="font-size:28px;color:#D5DBE5">déclencheurs</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;border-top:2px solid #3D4C6B;padding:24px 0 0 0">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#E8772E">6</p>
+<p style="font-size:28px;color:#D5DBE5">procédures</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;border-top:2px solid #3D4C6B;padding:24px 0 0 0">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#E8772E">4</p>
+<p style="font-size:28px;color:#D5DBE5">fonctions</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;border-top:2px solid #3D4C6B;padding:24px 0 0 0">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#E8772E">5</p>
+<p style="font-size:28px;color:#D5DBE5">vues</p>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Contrôler</h3>
+<p style="font-size:24px;line-height:1.45;color:#BFC8D6">Chevauchement de RDV, ordre des étapes, capacité des emplacements et des camions, produit / zone</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Mettre à jour</h3>
+<p style="font-size:24px;line-height:1.45;color:#BFC8D6">Stock recalculé à chaque mouvement, statut des quais, écarts calculés à la clôture</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Historiser</h3>
+<p style="font-size:24px;line-height:1.45;color:#BFC8D6">mouvement_stock immuable : une erreur se corrige par un ajustement</p>
+</div>
+</div>
+<aside>[Orateur 3] Notre choix le plus structurant : les règles métier sont dans la base, pas seulement dans le PHP. 20 déclencheurs, 6 procédures, 4 fonctions et 5 vues. Par exemple, un rendez-vous qui chevauche un autre sur le même quai est refusé par un déclencheur, même si on insère directement en SQL. Le stock n’est jamais saisi : il est recalculé à chaque mouvement, et la table des mouvements est immuable — on ne modifie pas, on ajuste. Preuve : nos 120 000 lignes de données factices ont été générées en passant par ces déclencheurs, elles respectent donc toutes les règles. (≈ 45 s)</aside>
+</section>
