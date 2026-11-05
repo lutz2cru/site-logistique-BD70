@@ -29,7 +29,7 @@ $erreurs = [];
 if (est_post()) {
     verifier_csrf();
     foreach ($v as $k => $_) { $v[$k] = trim((string) ($_POST[$k] ?? '')); }
-    if ($rdv) { $v['vehicule_id'] = $rdv['vehicule_id']; $v['sens'] = $rdv['sens']; }
+    if ($rdv) { $v['vehicule_id'] = (string) $rdv['vehicule_id']; $v['sens'] = $rdv['sens']; }
 
     $veh = null;            // véhicule et chauffeur choisis, retrouvés dans les listes proposées
     foreach ($vehicules as $x) {
