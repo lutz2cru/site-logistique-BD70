@@ -11,7 +11,7 @@
  *    passant par les déclencheurs et procédures de la base : les données
  *    factices respectent donc toutes les règles métier.
  *
- * Tous les comptes de démonstration ont le mot de passe « demo1234 »
+ * Tous les comptes de démonstration ont le mot de passe « BD70@26 »
  * (voir README.md).
  */
 
@@ -24,7 +24,7 @@ $host = $opts['host'] ?? 'localhost';
 $user = $opts['user'] ?? 'root';
 $pass = $opts['pass'] ?? '';
 
-const MOT_DE_PASSE_DEMO = 'demo1234';
+const MOT_DE_PASSE_DEMO = 'BD70@26';
 const JOURS_HISTORIQUE  = 60;
 const JOURS_FUTURS      = 7;
 const COMPTE_APPLI      = 'entrepot_app';           // voir www/config.php
@@ -319,15 +319,23 @@ foreach ($nomsTransporteurs as $idx => $nom) {
 }
 
 // ---------------------------------------------------------------------
-//  Utilisateurs (mot de passe commun : demo1234)
+//  Utilisateurs (mot de passe commun : BD70@26)
 // ---------------------------------------------------------------------
 $hash = password_hash(MOT_DE_PASSE_DEMO, PASSWORD_DEFAULT);
+// adresse professionnelle prenom.nom@entrepot-logistique.fr, suffixée d'un numéro en cas d'homonyme
+function emailPro(string $prenom, string $nom): string {
+    static $pris = [];
+    $base = strtolower(preg_replace('/[^a-z.]/i', '', iconv('UTF-8', 'ASCII//TRANSLIT', "$prenom.$nom")));
+    $n = $pris[$base] = ($pris[$base] ?? 0) + 1;
+    return $base . ($n > 1 ? $n : '') . '@entrepot-logistique.fr';
+}
 $utilisateurs = ['magasinier' => [], 'responsable' => [], 'accueil' => []];
 $comptesDemo = [
-    ['admin@entrepot.test', 'Admin', 'Système', 'admin'],
-    ['responsable@entrepot.test', 'Lombard', 'Alexandre', 'responsable'],
-    ['accueil@entrepot.test', 'Garnier', 'Inès', 'accueil'],
-    ['magasinier@entrepot.test', 'Morel', 'Hugo', 'magasinier'],
+    // comptes de fonction : pas de nom de personne, seulement l'intitulé du poste
+    ['administrateur.si@entrepot-logistique.fr', 'SI', 'Administrateur', 'admin'],
+    ['responsable.exploitation@entrepot-logistique.fr', 'Exploitation', 'Responsable', 'responsable'],
+    ['agent.accueil@entrepot-logistique.fr', 'Accueil', 'Agent', 'accueil'],
+    ['operateur.magasin@entrepot-logistique.fr', 'Magasin', 'Opérateur', 'magasinier'],
 ];
 foreach ($comptesDemo as [$email, $nom, $prenom, $profil]) {
     $id = inserer($pdo, 'utilisateur', ['email' => $email, 'nom' => $nom, 'prenom' => $prenom, 'telephone' => telephone(),
@@ -339,7 +347,7 @@ foreach (['responsable' => 2, 'accueil' => 3, 'magasinier' => 13] as $profil => 
     for ($i = 1; $i <= $n; $i++) {
         $p = alea($prenoms); $nm = alea($noms);
         $id = inserer($pdo, 'utilisateur', [
-            'email' => strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', "$p.$nm")) . ".$profil$i@entrepot.test",
+            'email' => emailPro($p, $nm),
             'nom' => $nm, 'prenom' => $p, 'telephone' => telephone(), 'mot_de_passe_hash' => $hash, 'actif' => 1,
             'profil_id' => $profilId[$profil], 'date_creation' => dt((new DateTimeImmutable())->modify('-' . entre(60, 400) . ' days')),
         ]);
@@ -347,17 +355,17 @@ foreach (['responsable' => 2, 'accueil' => 3, 'magasinier' => 13] as $profil => 
     }
 }
 $tidTransporteurDemo = array_key_first($transporteurs);
-inserer($pdo, 'utilisateur', ['email' => 'transporteur@entrepot.test', 'nom' => 'Girard', 'prenom' => 'Paul',
+inserer($pdo, 'utilisateur', ['email' => "planning@{$transporteurs[$tidTransporteurDemo]['slug']}.fr", 'nom' => 'Planning', 'prenom' => 'Service',
     'telephone' => telephone(), 'mot_de_passe_hash' => $hash, 'actif' => 1, 'profil_id' => $profilId['transporteur'],
     'transporteur_id' => $tidTransporteurDemo]);
 foreach (array_slice(array_keys($transporteurs), 1, 4) as $tid) {
-    inserer($pdo, 'utilisateur', ['email' => "planning@{$transporteurs[$tid]['slug']}.test", 'nom' => alea($noms),
+    inserer($pdo, 'utilisateur', ['email' => "planning@{$transporteurs[$tid]['slug']}.fr", 'nom' => alea($noms),
         'prenom' => alea($prenoms), 'mot_de_passe_hash' => $hash, 'actif' => 1,
         'profil_id' => $profilId['transporteur'], 'transporteur_id' => $tid]);
 }
 // inscriptions en attente de validation
 foreach ([['Rousseau', 'Camille'], ['Faure', 'Mehdi']] as [$nm, $p]) {
-    inserer($pdo, 'utilisateur', ['email' => strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', "$p.$nm")) . '@entrepot.test',
+    inserer($pdo, 'utilisateur', ['email' => emailPro($p, $nm),
         'nom' => $nm, 'prenom' => $p, 'mot_de_passe_hash' => $hash, 'actif' => 0, 'profil_id' => $profilId['magasinier']]);
 }
 
@@ -909,4 +917,4 @@ foreach ($tables as $t) {
     $n = $pdo->query("SELECT COUNT(*) FROM `{$t['table_name']}`")->fetchColumn();
     printf("  %-26s %8d\n", $t['table_name'], $n);
 }
-echo "\nComptes de démonstration (mot de passe : " . MOT_DE_PASSE_DEMO . ") : admin@, responsable@, accueil@, magasinier@, transporteur@entrepot.test\n";
+echo "\nComptes de démonstration (mot de passe : " . MOT_DE_PASSE_DEMO . ") : administrateur.si@, responsable.exploitation@, agent.accueil@, operateur.magasin@entrepot-logistique.fr, planning@transportsgirard.fr\n";

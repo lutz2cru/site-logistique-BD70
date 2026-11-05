@@ -30,15 +30,15 @@ déploiement (dans `sql/installer.php` et `www/config.php`).
 
 ## Comptes de démonstration
 
-Mot de passe commun : **`demo1234`**
+Mot de passe commun : **`BD70@26`**
 
 | Compte | Profil |
 |---|---|
-| `admin@entrepot.test` | Administrateur du système d'information : comptes et droits (aucun accès à l'exploitation) |
-| `responsable@entrepot.test` | Responsable d'exploitation : quais, structure, catalogue, clients, fournisseurs, transporteurs, commandes clients, listes de prélèvement, indicateurs et productivité des équipes ; ajuste les rendez-vous existants, consulte le planning, les flux, les réceptions et les avis d'expédition |
-| `accueil@entrepot.test` | Agent d'accueil (poste de garde) : rendez-vous, arrivées et départs des camions, chauffeurs et véhicules, statut des quais |
-| `magasinier@entrepot.test` | Magasinier / préparateur : avis d'expédition, réception, rangement, stocks, exécution de ses listes de prélèvement, colis et palettes, chargement des camions sortants |
-| `transporteur@entrepot.test` | Transporteur (ses rendez-vous uniquement) |
+| `administrateur.si@entrepot-logistique.fr` | Administrateur du système d'information : comptes et droits (aucun accès à l'exploitation) |
+| `responsable.exploitation@entrepot-logistique.fr` | Responsable d'exploitation : quais, structure, catalogue, clients, fournisseurs, transporteurs, commandes clients, listes de prélèvement, indicateurs et productivité des équipes ; ajuste les rendez-vous existants, consulte le planning, les flux, les réceptions et les avis d'expédition |
+| `agent.accueil@entrepot-logistique.fr` | Agent d'accueil (poste de garde) : rendez-vous, arrivées et départs des camions, chauffeurs et véhicules, statut des quais |
+| `operateur.magasin@entrepot-logistique.fr` | Magasinier / préparateur : avis d'expédition, réception, rangement, stocks, exécution de ses listes de prélèvement, colis et palettes, chargement des camions sortants |
+| `planning@transportsgirard.fr` | Transporteur (ses rendez-vous uniquement) |
 
 Deux inscriptions sont en attente de validation (menu *Administration › Utilisateurs*).
 
