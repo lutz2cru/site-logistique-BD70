@@ -114,6 +114,7 @@ input[type=checkbox] { width: 16px; height: 16px; }
 .alerte.succes { background: var(--vert-f); border-color: #a9dcbf; color: #0f5132; }
 .alerte.erreur { background: var(--rouge-f); border-color: #f3b6b0; color: #842029; }
 .alerte.info { background: var(--bleu-f); border-color: #b6cdf2; color: #123c7a; }
+.alerte.avertissement { background: var(--orange-f); border-color: #f5c98a; color: #7a4100; }
 .retard { color: var(--rouge); font-weight: 600; }
 
 /* ---------- jauges ---------- */

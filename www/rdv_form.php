@@ -50,9 +50,10 @@ function quais_disponibles(array $v, int $rdvId, DateTime $debut, DateTime $fin)
                      LEFT JOIN equipement eq ON eq.id = qe.equipement_id
                     WHERE q.statut <> 'hors_service' AND q.type IN (?, 'mixte')
                       AND NOT EXISTS (SELECT 1 FROM rendez_vous r WHERE r.quai_id = q.id AND r.id <> ?
-                                       AND r.statut IN ('planifie','honore') AND r.debut < ? AND r.fin > ?)
+                                       AND r.statut IN ('planifie','honore') AND r.debut > ? - INTERVAL 4 HOUR
+                                       AND r.debut < ? AND r.fin > ?)
                     GROUP BY q.id ORDER BY q.type = 'mixte', q.numero",
-        [$v['vehicule_id'], $v['sens'], $rdvId, $fin->format('Y-m-d H:i'), $debut->format('Y-m-d H:i')]);
+        [$v['vehicule_id'], $v['sens'], $rdvId, $debut->format('Y-m-d H:i'), $fin->format('Y-m-d H:i'), $debut->format('Y-m-d H:i')]);
 }
 
 if (est_post()) {
@@ -186,4 +187,5 @@ entete($rdv ? "Rendez-vous {$rdv['numero']}" : 'Nouveau rendez-vous', 'rdv.php')
     </form>
 </div>
 <?php endif; ?>
+<?php if ($rdv) { carte_historique_statuts('rendez_vous', $id, !$estTransporteur); } ?>
 <?php pied();

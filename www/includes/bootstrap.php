@@ -30,6 +30,10 @@ function db(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]);
+        // auteur des changements de statut, lu par les déclencheurs du journal (historique_statut)
+        if (isset($_SESSION['utilisateur']['id'])) {
+            $pdo->prepare('SET @utilisateur_id = ?')->execute([(int) $_SESSION['utilisateur']['id']]);
+        }
     }
     return $pdo;
 }
@@ -235,11 +239,17 @@ function liens_pagination(int $page, int $pages): string
 function articles_disponibles(int $clientId): array
 {
     $articles = [];
-    foreach (lignes("SELECT ar.id, ar.reference, ar.designation,
-                            COALESCE((SELECT SUM(s.quantite) FROM stock s JOIN lot l ON l.id = s.lot_id WHERE l.article_id = ar.id), 0)
-                          - COALESCE((SELECT SUM(lp.quantite_a_prelever) FROM ligne_prelevement lp JOIN liste_prelevement li ON li.id = lp.liste_id
-                                        JOIN lot l ON l.id = lp.lot_id WHERE l.article_id = ar.id AND li.statut <> 'terminee' AND lp.quantite_prelevee IS NULL), 0) AS dispo
-                       FROM article ar WHERE ar.client_id = ? ORDER BY ar.reference", [$clientId]) as $a) {
+    // On part du stock (quelques centaines de lignes) et des prélèvements en cours, regroupés par
+    // article, plutôt que de parcourir tous les lots de chaque article : l'historique des lots
+    // sortis ne ralentit plus la requête (voir docs/rapport_montee_en_charge.md).
+    foreach (lignes("SELECT ar.id, ar.reference, ar.designation, COALESCE(st.quantite, 0) - COALESCE(re.quantite, 0) AS dispo
+                       FROM article ar
+                       LEFT JOIN (SELECT l.article_id, SUM(s.quantite) AS quantite FROM stock s JOIN lot l ON l.id = s.lot_id
+                                   GROUP BY l.article_id) st ON st.article_id = ar.id
+                       LEFT JOIN (SELECT l.article_id, SUM(lp.quantite_a_prelever) AS quantite FROM ligne_prelevement lp
+                                    JOIN liste_prelevement li ON li.id = lp.liste_id JOIN lot l ON l.id = lp.lot_id
+                                   WHERE li.statut <> 'terminee' AND lp.quantite_prelevee IS NULL GROUP BY l.article_id) re ON re.article_id = ar.id
+                      WHERE ar.client_id = ? ORDER BY ar.reference", [$clientId]) as $a) {
         if ($a['dispo'] > 0) { $articles[$a['id']] = $a; }
     }
     return $articles;

@@ -112,6 +112,36 @@ function messages_flash(): void
     unset($_SESSION['flash']);
 }
 
+/**
+ * Carte « Historique des statuts » d'un rendez-vous, d'une commande ou d'un quai,
+ * lue dans le journal tenu par les déclencheurs de la base (table historique_statut).
+ */
+function carte_historique_statuts(string $objet, int $id, bool $avecAuteur = true, int $limite = 20): void
+{
+    $lignes = lignes("SELECT h.date_heure, h.ancien_statut, h.nouveau_statut, CONCAT(u.prenom, ' ', u.nom) AS auteur
+                        FROM historique_statut h LEFT JOIN utilisateur u ON u.id = h.utilisateur_id
+                       WHERE h.objet = ? AND h.objet_id = ?
+                       ORDER BY h.date_heure DESC, h.id DESC LIMIT " . (int) $limite, [$objet, $id]);
+    ?>
+<div class="carte">
+    <h2>Historique des statuts <span class="discret">enregistré automatiquement par la base</span></h2>
+    <?php if (!$lignes): ?><p class="vide">Aucun changement de statut depuis la création.</p><?php else: ?>
+    <div class="tableau"><table>
+        <tr><th>Date</th><th>Changement</th><?php if ($avecAuteur): ?><th>Par</th><?php endif; ?></tr>
+        <?php foreach ($lignes as $h): ?>
+        <tr>
+            <td><?= date_heure_fr($h['date_heure']) ?></td>
+            <td><?= pastille($h['ancien_statut']) ?> → <?= pastille($h['nouveau_statut']) ?></td>
+            <?php if ($avecAuteur): ?><td><?= e($h['auteur'] ?? 'Automatique') ?></td><?php endif; ?>
+        </tr>
+        <?php endforeach; ?>
+    </table></div>
+    <?php if (count($lignes) === $limite): ?><p class="discret">Les <?= $limite ?> derniers changements sont affichés.</p><?php endif; ?>
+    <?php endif; ?>
+</div>
+<?php
+}
+
 function pied(string $scripts = ''): void
 {
     ?>

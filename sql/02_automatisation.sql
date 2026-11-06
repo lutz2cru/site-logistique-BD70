@@ -2,7 +2,8 @@
 --  Script 2/2 : automatisation interne à la base
 --   - fonctions et procédures stockées
 --   - déclencheurs (numérotation, contrôles métier, mise à jour du stock,
---     statut des quais, historisation des mouvements de stock)
+--     statut des quais, journal des changements de statut, immuabilité
+--     des mouvements de stock et des étapes de passage)
 --   - vues d'indicateurs
 -- =====================================================================
 USE entrepot;
@@ -93,10 +94,14 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ce type de véhicule n''est pas accepté sur ce quai.';
     END IF;
 
+    -- Deux créneaux se chevauchent si r.debut < p_fin AND r.fin > p_debut. Un rendez-vous durant
+    -- au plus 4 h (ck_rdv_creneau), on ajoute r.debut > p_debut - 4 h : la lecture de l'index
+    -- (quai, debut, fin) est bornée des deux côtés au lieu de parcourir tout l'historique du quai.
     IF EXISTS (SELECT 1 FROM rendez_vous r
                 WHERE r.quai_id = p_quai_id
                   AND r.id <> COALESCE(p_id, 0)
                   AND r.statut IN ('planifie', 'honore')
+                  AND r.debut > p_debut - INTERVAL 4 HOUR
                   AND r.debut < p_fin AND r.fin > p_debut) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ce créneau chevauche un autre rendez-vous sur ce quai.';
     END IF;
@@ -105,9 +110,66 @@ BEGIN
                 WHERE r.vehicule_id = p_vehicule_id
                   AND r.id <> COALESCE(p_id, 0)
                   AND r.statut IN ('planifie', 'honore')
+                  AND r.debut > p_debut - INTERVAL 4 HOUR
                   AND r.debut < p_fin AND r.fin > p_debut) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ce véhicule a déjà un rendez-vous sur ce créneau.';
     END IF;
+END$$
+
+-- Écrit une ligne du journal des statuts. L'auteur et l'heure viennent de deux
+-- variables de session : @utilisateur_id, positionnée par le site à chaque connexion
+-- à la base (www/includes/bootstrap.php), et @horodatage, positionnée quand l'heure du
+-- changement n'est pas l'heure courante (étape de passage, données simulées) ; à défaut NOW().
+CREATE PROCEDURE journaliser_statut(
+    IN p_objet VARCHAR(12), IN p_objet_id INT UNSIGNED, IN p_ancien VARCHAR(20), IN p_nouveau VARCHAR(20))
+BEGIN
+    INSERT INTO historique_statut (objet, objet_id, ancien_statut, nouveau_statut, date_heure, utilisateur_id)
+    VALUES (p_objet, p_objet_id, p_ancien, p_nouveau, COALESCE(@horodatage, NOW()), @utilisateur_id);
+END$$
+
+-- =====================================================================
+--  DÉCLENCHEURS : historisation des statuts
+-- =====================================================================
+CREATE TRIGGER tr_rdv_au AFTER UPDATE ON rendez_vous FOR EACH ROW
+BEGIN
+    IF NEW.statut <> OLD.statut THEN
+        CALL journaliser_statut('rendez_vous', NEW.id, OLD.statut, NEW.statut);
+    END IF;
+END$$
+
+CREATE TRIGGER tr_commande_au AFTER UPDATE ON commande FOR EACH ROW
+BEGIN
+    IF NEW.statut <> OLD.statut THEN
+        CALL journaliser_statut('commande', NEW.id, OLD.statut, NEW.statut);
+    END IF;
+END$$
+
+CREATE TRIGGER tr_quai_au AFTER UPDATE ON quai FOR EACH ROW
+BEGIN
+    IF NEW.statut <> OLD.statut THEN
+        CALL journaliser_statut('quai', NEW.id, OLD.statut, NEW.statut);
+    END IF;
+END$$
+
+-- Le journal des statuts et les horodatages des passages sont immuables
+CREATE TRIGGER tr_historique_bu BEFORE UPDATE ON historique_statut FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Le journal des statuts ne peut pas être modifié.';
+END$$
+
+CREATE TRIGGER tr_historique_bd BEFORE DELETE ON historique_statut FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Le journal des statuts ne peut pas être supprimé.';
+END$$
+
+CREATE TRIGGER tr_passage_etape_bu BEFORE UPDATE ON passage_etape FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Une étape enregistrée ne peut pas être modifiée : ajouter un commentaire au passage.';
+END$$
+
+CREATE TRIGGER tr_passage_etape_bd BEFORE DELETE ON passage_etape FOR EACH ROW
+BEGIN
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Une étape enregistrée ne peut pas être supprimée.';
 END$$
 
 -- =====================================================================
@@ -309,9 +371,14 @@ BEGIN
     DECLARE v_code    VARCHAR(20);
     DECLARE v_quai_id SMALLINT UNSIGNED;
     DECLARE v_rdv_id  INT UNSIGNED;
+    DECLARE v_horodatage DATETIME;
 
     SELECT code INTO v_code FROM type_etape WHERE id = NEW.type_etape_id;
     SELECT quai_id, rendez_vous_id INTO v_quai_id, v_rdv_id FROM passage WHERE id = NEW.passage_id;
+
+    -- les changements de statut qui suivent sont journalisés à l'heure de l'étape
+    SET v_horodatage = @horodatage;
+    SET @horodatage = NEW.date_heure;
 
     UPDATE passage SET etape_courante_id = NEW.type_etape_id WHERE id = NEW.passage_id;
 
@@ -322,6 +389,8 @@ BEGIN
     ELSEIF v_code = 'DEPART' AND v_quai_id IS NOT NULL THEN
         UPDATE quai SET statut = 'libre' WHERE id = v_quai_id AND statut = 'occupe';
     END IF;
+
+    SET @horodatage = v_horodatage;
 END$$
 
 -- =====================================================================
@@ -592,6 +661,7 @@ SELECT q.id, q.numero, q.type,
            WHEN q.statut = 'occupe'       THEN 'occupe'
            WHEN EXISTS (SELECT 1 FROM rendez_vous r
                          WHERE r.quai_id = q.id AND r.statut = 'planifie'
+                           AND r.debut >= NOW() - INTERVAL 4 HOUR  -- borne l'index (durée max. 4 h ; >= car fin >= NOW() inclut l'égalité)
                            AND r.debut <= NOW() + INTERVAL 1 HOUR AND r.fin >= NOW()) THEN 'reserve'
            ELSE 'libre'
        END AS statut,

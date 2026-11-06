@@ -512,16 +512,28 @@ function deroulerPassage(PDOStatement $etape, PDOStatement $majQuai, array $etap
                          DateTimeImmutable $arrivee, DateTimeImmutable $creneau, bool $sansRdv, float $ponctualite,
                          string $etapeMax, DateTimeImmutable $maintenant): array
 {
+    // occupation simulée de chaque quai (de l'appel au départ) : sans elle, un retard ferait appeler
+    // deux camions sur le même quai au même moment. Les événements ne sont pas traités dans l'ordre
+    // chronologique (expéditions d'abord) : on cherche donc le premier intervalle libre du quai.
+    static $occupation = [];
     $t = ['ARRIVEE' => $arrivee];
     $t['CONTROLE'] = plusMin($arrivee, entre(2, 8));
     $appel = plusMin($t['CONTROLE'], entre(2, 10));
     if ($appel < $creneau) { $appel = $creneau; }
     $appel = plusMin($appel, (int) (entre(0, $sansRdv ? 70 : 30) * $ponctualite));
+    [$approche, $operation, $sortie] = [entre(3, 10), entre(20, 55), entre(5, 20)];
+    $duree = $approche + $operation + $sortie;
+    $intervalles = $occupation[$quaiId] ?? [];
+    usort($intervalles, fn ($a, $b) => $a[0] <=> $b[0]);
+    foreach ($intervalles as [$occDebut, $occFin]) {
+        // au moins 2 min entre le départ d'un camion et l'appel du suivant
+        if ($appel < plusMin($occFin, 2) && plusMin($appel, $duree + 2) > $occDebut) { $appel = plusMin($occFin, 2); }
+    }
     if (TIMESTAMPDIFF_MIN($t['CONTROLE'], $appel) > 12) { $t['PARKING'] = plusMin($t['CONTROLE'], entre(1, 4)); }
     $t['APPEL_QUAI'] = $appel;
-    $t['DEBUT_OP'] = plusMin($appel, entre(3, 10));
-    $t['FIN_OP'] = plusMin($t['DEBUT_OP'], entre(20, 55));
-    $t['DEPART'] = plusMin($t['FIN_OP'], entre(5, 20));
+    $t['DEBUT_OP'] = plusMin($appel, $approche);
+    $t['FIN_OP'] = plusMin($t['DEBUT_OP'], $operation);
+    $t['DEPART'] = plusMin($t['FIN_OP'], $sortie);
 
     $derniere = null;
     foreach ($t as $code => $date) {
@@ -538,6 +550,11 @@ function deroulerPassage(PDOStatement $etape, PDOStatement $majQuai, array $etap
         }
         $derniere = $code;
         if ($code === $etapeMax) { break; }
+    }
+    if ($derniere === 'DEPART') {
+        $occupation[$quaiId][] = [$t['APPEL_QUAI'], $t['DEPART']];
+    } elseif (in_array($derniere, ['APPEL_QUAI', 'DEBUT_OP', 'FIN_OP'], true)) {
+        $occupation[$quaiId][] = [$t['APPEL_QUAI'], $maintenant->modify('+1 year')];   // camion encore à quai
     }
     return [$t, $derniere];
 }
@@ -668,10 +685,12 @@ function simulerExpedition(PDO $pdo, int $passageId, array $t, bool $charger, bo
     $uniteChargees = 0;
     foreach ($commandes as $cmdId) {
         $regle = proba(0.6) ? 'FEFO' : 'FIFO';
-        $pdo->prepare('CALL generer_liste_prelevement(?, ?, @liste)')->execute([$cmdId, $regle]);
-        $listeId = (int) $pdo->query('SELECT @liste')->fetchColumn();
         $prep = alea($utilisateurs['magasinier']);
         $debut = plusMin($t['ARRIVEE'], -entre(60, 240));
+        // les changements de statut de la commande sont journalisés à l'heure simulée
+        $pdo->exec("SET @horodatage = '" . dt(plusMin($debut, -30)) . "'");
+        $pdo->prepare('CALL generer_liste_prelevement(?, ?, @liste)')->execute([$cmdId, $regle]);
+        $listeId = (int) $pdo->query('SELECT @liste')->fetchColumn();
         $heure = $debut;
         $lignes = $pdo->query("SELECT lot_id, emplacement_id, quantite_a_prelever FROM ligne_prelevement WHERE liste_id = $listeId ORDER BY ordre")->fetchAll();
         $contenu = [];
@@ -704,7 +723,13 @@ function simulerExpedition(PDO $pdo, int $passageId, array $t, bool $charger, bo
             foreach ($groupe as $lot => $q) { inserer($pdo, 'contenu_unite', ['unite_id' => $ueId, 'lot_id' => $lot, 'quantite' => $q]); }
         }
         // une commande n'est expédiée que si toutes ses unités sont parties ; sinon elle attend un autre camion
-        $pdo->exec("UPDATE commande SET statut = '" . ($chargees === $total ? 'expediee' : 'preparee') . "' WHERE id = $cmdId");
+        $pdo->exec("SET @horodatage = '" . dt(plusMin($heure, 5)) . "'");
+        $pdo->exec("UPDATE commande SET statut = 'preparee' WHERE id = $cmdId");
+        if ($chargees === $total) {
+            $pdo->exec("SET @horodatage = '" . dt($t['FIN_OP']) . "'");
+            $pdo->exec("UPDATE commande SET statut = 'expediee' WHERE id = $cmdId");
+        }
+        $pdo->exec('SET @horodatage = NULL');
         if ($chargees > 0) {
             inserer($pdo, 'document_transport', ['expedition_id' => $expId, 'type' => 'BL', 'date_emission' => dt($t['DEBUT_OP'])]);
         }
@@ -897,14 +922,14 @@ $pdo->commit();
 // ---------------------------------------------------------------------
 //  Compte de l'application : moindre privilège
 // ---------------------------------------------------------------------
-// Lecture partout, écriture table par table, sauf `stock`, tenu par les
+// Lecture partout, écriture table par table, sauf `stock` et `historique_statut`, tenus par les
 // déclencheurs (qui s'exécutent avec les droits de leur créateur), ni structure.
 foreach (['localhost', '127.0.0.1'] as $origine) {
     $compte = "'" . COMPTE_APPLI . "'@'$origine'";
     $pdo->exec("CREATE OR REPLACE USER $compte IDENTIFIED BY '" . MOT_DE_PASSE_APPLI . "'");
     $pdo->exec("GRANT SELECT, EXECUTE ON entrepot.* TO $compte");
     $ecriture = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'entrepot' AND table_type = 'BASE TABLE'
-                              AND table_name <> 'stock'")->fetchAll(PDO::FETCH_COLUMN);
+                              AND table_name NOT IN ('stock', 'historique_statut')")->fetchAll(PDO::FETCH_COLUMN);
     foreach ($ecriture as $t) { $pdo->exec("GRANT INSERT, UPDATE, DELETE ON entrepot.`$t` TO $compte"); }
 }
 
