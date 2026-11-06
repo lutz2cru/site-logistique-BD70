@@ -197,9 +197,11 @@ CREATE TABLE rendez_vous (
     commentaire      VARCHAR(255)      NULL,
     CONSTRAINT fk_rdv_quai     FOREIGN KEY (quai_id)     REFERENCES quai (id),
     CONSTRAINT fk_rdv_vehicule FOREIGN KEY (vehicule_id) REFERENCES vehicule (id),
-    CONSTRAINT ck_rdv_creneau  CHECK (fin > debut),
-    -- index utilisé par le contrôle de chevauchement et le planning
+    -- au plus 4 h : borne aussi la recherche de chevauchement (debut > p_debut - 4 h)
+    CONSTRAINT ck_rdv_creneau  CHECK (fin > debut AND fin <= debut + INTERVAL 4 HOUR),
+    -- index utilisés par les contrôles de chevauchement (quai, véhicule) et le planning
     INDEX ix_rdv_quai_creneau (quai_id, debut, fin),
+    INDEX ix_rdv_vehicule_creneau (vehicule_id, debut, fin),
     INDEX ix_rdv_debut (debut)
 ) ENGINE=InnoDB;
 

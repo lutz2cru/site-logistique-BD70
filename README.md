@@ -28,6 +28,22 @@ peut lire la base et écrire dans les tables métier, mais ni dans `stock` (tenu
 déclencheurs) ni dans la structure. Son mot de passe, de démonstration, est à changer pour un vrai
 déploiement (dans `sql/installer.php` et `www/config.php`).
 
+### Test de montée en charge (facultatif)
+
+Après l'installation, on peut ajouter plusieurs années d'historique, daté avant les jours simulés
+(les écrans du jour ne changent pas), puis mesurer chaque palier :
+
+```bash
+C:\xampp\php\php.exe sql/performances.php --palier=base
+C:\xampp\php\php.exe sql/montee_en_charge.php --mouvements=1000000 --rdv=200000
+C:\xampp\php\php.exe sql/performances.php --palier=1M
+C:\xampp\php\php.exe sql/montee_en_charge.php --mouvements=5000000 --rdv=900000
+C:\xampp\php\php.exe sql/performances.php --palier=5M
+```
+
+Le tableau comparatif est écrit dans `docs/rapport_montee_en_charge.md`. Comptez environ 4 min par
+million de mouvements. Relancer `installer.php` rend la base de démonstration.
+
 ## Comptes de démonstration
 
 Mot de passe commun : **`BD70@26`**
@@ -50,6 +66,7 @@ sql/
   02_automatisation.sql    fonctions, procédures, déclencheurs, vues
   installer.php            installation + génération des données factices
   performances.php         mesure des requêtes principales (écrit les mesures dans docs/rapport_performances.md)
+  montee_en_charge.php     ajoute un historique ancien (millions de lignes) pour tester la tenue en charge
   schema_relationnel.php   liste les tables de la base installée (écrit docs/schema_relationnel.md)
 www/                       site web (une page PHP par écran, gabarit commun dans includes/)
 docs/                      documents Word : rapport de projet, cahier des charges, fiches de cas

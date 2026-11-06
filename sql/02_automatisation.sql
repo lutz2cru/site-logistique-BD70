@@ -93,10 +93,14 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ce type de véhicule n''est pas accepté sur ce quai.';
     END IF;
 
+    -- Deux créneaux se chevauchent si r.debut < p_fin AND r.fin > p_debut. Un rendez-vous durant
+    -- au plus 4 h (ck_rdv_creneau), on ajoute r.debut > p_debut - 4 h : la lecture de l'index
+    -- (quai, debut, fin) est bornée des deux côtés au lieu de parcourir tout l'historique du quai.
     IF EXISTS (SELECT 1 FROM rendez_vous r
                 WHERE r.quai_id = p_quai_id
                   AND r.id <> COALESCE(p_id, 0)
                   AND r.statut IN ('planifie', 'honore')
+                  AND r.debut > p_debut - INTERVAL 4 HOUR
                   AND r.debut < p_fin AND r.fin > p_debut) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ce créneau chevauche un autre rendez-vous sur ce quai.';
     END IF;
@@ -105,6 +109,7 @@ BEGIN
                 WHERE r.vehicule_id = p_vehicule_id
                   AND r.id <> COALESCE(p_id, 0)
                   AND r.statut IN ('planifie', 'honore')
+                  AND r.debut > p_debut - INTERVAL 4 HOUR
                   AND r.debut < p_fin AND r.fin > p_debut) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ce véhicule a déjà un rendez-vous sur ce créneau.';
     END IF;
@@ -592,6 +597,7 @@ SELECT q.id, q.numero, q.type,
            WHEN q.statut = 'occupe'       THEN 'occupe'
            WHEN EXISTS (SELECT 1 FROM rendez_vous r
                          WHERE r.quai_id = q.id AND r.statut = 'planifie'
+                           AND r.debut >= NOW() - INTERVAL 4 HOUR  -- borne l'index (durée max. 4 h ; >= car fin >= NOW() inclut l'égalité)
                            AND r.debut <= NOW() + INTERVAL 1 HOUR AND r.fin >= NOW()) THEN 'reserve'
            ELSE 'libre'
        END AS statut,

@@ -1,0 +1,87 @@
+{
+    "palier": "1M avant",
+    "date": "06\/11\/2026 09:53",
+    "version": "10.4.32-MariaDB",
+    "index_vehicule": false,
+    "volumes": {
+        "mouvement_stock": 1016844,
+        "rendez_vous": 203759,
+        "lot": 104077,
+        "passage_etape": 23597,
+        "total": 1415756
+    },
+    "mesures": {
+        "Planning d'une journée": {
+            "avec": 0.259,
+            "sans": 1895.255
+        },
+        "Contrôle de chevauchement": {
+            "avec": 3.188,
+            "sans": 343.275
+        },
+        "Contrôle du véhicule": {
+            "avec": 23.478,
+            "sans": null
+        },
+        "Prise d'un rendez-vous": {
+            "avec": 34.629,
+            "sans": null
+        },
+        "Camions sur site": {
+            "avec": 0.552,
+            "sans": null
+        },
+        "État des quais en temps réel": {
+            "avec": 19.989,
+            "sans": null
+        },
+        "Recherche plein texte (1re version)": {
+            "avec": 12.035,
+            "sans": 6.878
+        },
+        "Recherche plein texte (version retenue)": {
+            "avec": 0.15,
+            "sans": 0.237
+        },
+        "Étape 2 : stock des articles trouvés (stock.php)": {
+            "avec": 2.372,
+            "sans": null
+        },
+        "Historique d'un lot": {
+            "avec": 0.129,
+            "sans": 229.073
+        },
+        "Mouvements des 7 derniers jours": {
+            "avec": 1.043,
+            "sans": 219.318
+        },
+        "Temps moyens par transporteur (30 j)": {
+            "avec": 8.94,
+            "sans": null
+        },
+        "Remplissage par zone": {
+            "avec": 9.799,
+            "sans": null
+        },
+        "Taux d'écart par fournisseur": {
+            "avec": 3.26,
+            "sans": null
+        },
+        "Lots proches de la DLC": {
+            "avec": 0.795,
+            "sans": null
+        },
+        "Proposition d'emplacements": {
+            "avec": 64.275,
+            "sans": null
+        },
+        "Stock disponible d'un client": {
+            "avec": 22.966,
+            "sans": null
+        },
+        "Contenu d'une expédition": {
+            "avec": 0.198,
+            "sans": null
+        }
+    }
+}

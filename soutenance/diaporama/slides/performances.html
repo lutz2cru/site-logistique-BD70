@@ -1,26 +1,26 @@
 <section id="performances" data-transition="fade" style="background:#F6F4EE;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="display:flex;flex-direction:column;gap:12px">
 <p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B85A1C;font-weight:700">Performances</p>
-<h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Un index bien choisi divise le temps par 15 à 20</h2>
+<h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Testée à 6,5 millions de lignes, la base tient la charge</h2>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px">
 <div style="display:flex;flex-direction:column;gap:12px;background:#14213D;color:#F6F4EE;padding:40px;border-radius:16px">
-<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#E8772E">×15</p>
-<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Contrôle de chevauchement</h3>
-<p style="font-size:24px;line-height:1.45;color:#D5DBE5">0,08 ms au lieu de 1,21 ms, index ix_rdv_quai_creneau</p>
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#E8772E">×5 600</p>
+<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Historique d’un lot</h3>
+<p style="font-size:24px;line-height:1.45;color:#D5DBE5">0,15 ms avec l’index, 834 ms sans, sur 5 millions de mouvements</p>
 </div>
 <div style="display:flex;flex-direction:column;gap:12px;background:#14213D;color:#F6F4EE;padding:40px;border-radius:16px">
-<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#E8772E">×20</p>
-<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Historique d’un lot</h3>
-<p style="font-size:24px;line-height:1.45;color:#D5DBE5">0,08 ms au lieu de 1,74 ms, index ix_mvt_lot_date</p>
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#E8772E">×250</p>
+<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Prise d’un rendez-vous</h3>
+<p style="font-size:24px;line-height:1.45;color:#D5DBE5">102 ms → 0,4 ms : index ajouté sur le véhicule, recherche de chevauchement bornée à 4 h</p>
 </div>
 <div style="display:flex;flex-direction:column;gap:12px;background:#EAE6DC;padding:40px;border-radius:16px">
-<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#B85A1C">32 ms</p>
-<h3 style="font-size:32px;font-weight:700">Requête la plus lente</h3>
-<p style="font-size:24px;line-height:1.45;color:#3A4558">Proposition d’emplacements : acceptable pour un écran de rangement</p>
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:120px;font-weight:600;line-height:1;color:#B85A1C">×56</p>
+<h3 style="font-size:32px;font-weight:700">Stock disponible</h3>
+<p style="font-size:24px;line-height:1.45;color:#3A4558">50 ms → 0,9 ms : requête réécrite, le stock est regroupé avant la jointure</p>
 </div>
 </div>
-<p style="font-size:32px;line-height:1.4;color:#3A4558">16 requêtes principales mesurées par sql/performances.php : médiane de 20 exécutions, plan lu avec EXPLAIN.</p>
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#5A6474">Mesures du 04/11/2026, MariaDB 10.4, ~120 000 lignes (rapport d’analyse des performances)</p>
-<aside>[Orateur 1] Pour les performances, un script mesure les 16 requêtes principales : chaque requête est exécutée 20 fois et on garde la médiane, avec et sans index, et on lit le plan avec EXPLAIN. Le contrôle de chevauchement, exécuté à chaque prise de rendez-vous, est 15 fois plus rapide grâce à un index composite sur quai et créneau ; l’historique d’un lot 20 fois plus rapide. La requête la plus lente, la proposition d’emplacements, reste à 32 ms. (≈ 35 s)</aside>
+<p style="font-size:32px;line-height:1.4;color:#3A4558">Historique de plusieurs années ajouté par les déclencheurs, puis 19 requêtes mesurées à chaque palier : médiane de 20 exécutions, plan lu avec EXPLAIN.</p>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#5A6474">Mesures du 06/11/2026, MariaDB 10.4, de 120 000 à 6,5 millions de lignes (rapport de montée en charge)</p>
+<aside>[Orateur 1] Pour les performances, on a ajouté plusieurs années d’historique, en passant par les déclencheurs, jusqu’à 6,5 millions de lignes, et on a mesuré 19 requêtes à chaque palier. Avec un bon index, l’historique d’un lot reste à 0,15 ms ; sans index, il faut 834 ms. Le test a aussi révélé deux problèmes : la prise de rendez-vous montait à 102 ms, faute d’index sur le véhicule et parce que la recherche de chevauchement n’était bornée que d’un côté. Après correction : 0,4 ms. Enfin, une requête réécrite fait passer le stock disponible de 50 à 0,9 ms. (≈ 40 s)</aside>
 </section>
