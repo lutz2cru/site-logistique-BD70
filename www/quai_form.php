@@ -83,4 +83,5 @@ entete($quai ? "Quai {$quai['numero']}" : 'Nouveau quai', 'quais.php');
         </div>
     </form>
 </div>
+<?php if ($quai) { carte_historique_statuts('quai', $id); } ?>
 <?php pied();

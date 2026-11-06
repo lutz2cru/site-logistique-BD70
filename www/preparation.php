@@ -25,8 +25,23 @@ if (est_post()) {
             if ($prep && isset($preparateurs[$prep])) {
                 requete('UPDATE liste_prelevement SET preparateur_id = ? WHERE id = ?', [$prep, $liste['id']]);
             }
-            flash($liste['nb'] ? 'succes' : 'info', $liste['nb'] ? "Liste {$liste['numero']} générée ({$liste['nb']} ligne(s))."
-                                                              : "Liste {$liste['numero']} générée, mais aucun stock disponible pour cette commande.");
+            // quantités que le stock disponible n'a pas permis de couvrir, article par article
+            $manquants = lignes('SELECT ar.reference, lc.quantite - COALESCE(p.quantite, 0) AS manque
+                                   FROM ligne_commande lc JOIN article ar ON ar.id = lc.article_id
+                                   LEFT JOIN (SELECT l.article_id, SUM(lp.quantite_a_prelever) AS quantite
+                                                FROM ligne_prelevement lp JOIN lot l ON l.id = lp.lot_id
+                                               WHERE lp.liste_id = ? GROUP BY l.article_id) p ON p.article_id = lc.article_id
+                                  WHERE lc.commande_id = ? AND lc.quantite > COALESCE(p.quantite, 0)
+                                  ORDER BY ar.reference', [$liste['id'], $_POST['generer']]);
+            if (!$liste['nb']) {
+                flash('erreur', "Liste {$liste['numero']} générée, mais aucun stock disponible pour cette commande.");
+            } elseif ($manquants) {
+                $detail = implode(', ', array_map(fn ($m) => nombre($m['manque']) . ' u. de ' . $m['reference'], $manquants));
+                flash('avertissement', "Liste {$liste['numero']} générée ({$liste['nb']} ligne(s)), mais incomplète "
+                                     . "faute de stock disponible : il manque $detail.");
+            } else {
+                flash('succes', "Liste {$liste['numero']} générée ({$liste['nb']} ligne(s)).");
+            }
         } elseif (isset($_POST['affecter'])) {
             $prep = (int) ($_POST['preparateur_id'] ?? 0);
             if (!isset($preparateurs[$prep])) { throw new RuntimeException('Choisissez un préparateur.'); }
@@ -51,7 +66,9 @@ $aPreparer = lignes("SELECT c.id, c.numero, c.date_commande, c.expedition_souhai
                       GROUP BY c.id ORDER BY c.expedition_souhaitee, c.numero");
 $listes = lignes("SELECT li.*, c.numero AS commande, c.expedition_souhaitee, cl.raison_sociale AS client,
                          CONCAT(u.prenom, ' ', u.nom) AS preparateur,
-                         COUNT(lp.lot_id) AS nb_lignes, SUM(lp.quantite_prelevee IS NOT NULL) AS nb_faites
+                         COUNT(lp.lot_id) AS nb_lignes, SUM(lp.quantite_prelevee IS NOT NULL) AS nb_faites,
+                         (SELECT SUM(lc.quantite) FROM ligne_commande lc WHERE lc.commande_id = li.commande_id)
+                           - COALESCE(SUM(lp.quantite_a_prelever), 0) AS non_couvert
                     FROM liste_prelevement li JOIN commande c ON c.id = li.commande_id JOIN client cl ON cl.id = c.client_id
                     LEFT JOIN utilisateur u ON u.id = li.preparateur_id
                     LEFT JOIN ligne_prelevement lp ON lp.liste_id = li.id
@@ -99,7 +116,9 @@ entete('Préparation des commandes');
             <td><?= e($l['commande']) ?></td><td><?= e($l['client']) ?></td>
             <td><?= date_fr($l['expedition_souhaitee']) ?></td><td><?= e($l['regle_sortie']) ?></td>
             <td class="nombre"><?= (int) $l['nb_faites'] ?> / <?= $l['nb_lignes'] ?></td>
-            <td><?= pastille($l['statut']) ?></td>
+            <td><?= pastille($l['statut']) ?>
+                <?php if ($l['non_couvert'] > 0): ?><span class="pastille orange" title="Quantité commandée que le stock disponible ne couvrait pas à la génération">Incomplète : <?= nombre($l['non_couvert']) ?> u. non couvertes</span><?php endif; ?>
+            </td>
             <td>
                 <?php if ($l['statut'] === 'a_faire'): ?>
                 <form method="post" class="actions">

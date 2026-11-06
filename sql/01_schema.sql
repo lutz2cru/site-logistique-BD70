@@ -1,6 +1,6 @@
 -- =====================================================================
 --  Système de gestion d'un entrepôt logistique — BD70
---  Script 1/2 : modèle relationnel (tables, clés, contraintes, index)
+--  Script 1/2 : modèle relationnel (46 tables, clés, contraintes, index)
 --  SGBD cible : MariaDB 10.4+ (CREATE SEQUENCE n'existe pas sous MySQL)
 -- =====================================================================
 --  Conventions :
@@ -580,4 +580,25 @@ CREATE TABLE document_transport (
     type          ENUM('BL','CMR') NOT NULL,          -- bon de livraison / lettre de voiture
     date_emission DATETIME     NOT NULL,
     CONSTRAINT fk_dt_expedition FOREIGN KEY (expedition_id) REFERENCES expedition (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- =====================================================================
+--  H. Historisation des statuts
+-- =====================================================================
+-- Journal écrit EXCLUSIVEMENT par les déclencheurs (voir 02_automatisation.sql) à
+-- chaque changement de statut d'un rendez-vous, d'une commande ou d'un quai ; il
+-- n'est jamais modifié ni supprimé (le compte de l'application n'y a que la lecture).
+-- objet_id ne porte volontairement pas de clé étrangère : un journal doit survivre
+-- à la suppression de l'élément qu'il décrit (commande supprimée, quai démonté).
+CREATE TABLE historique_statut (
+    id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    objet          ENUM('rendez_vous','commande','quai') NOT NULL,
+    objet_id       INT UNSIGNED NOT NULL,
+    ancien_statut  VARCHAR(20)  NOT NULL,
+    nouveau_statut VARCHAR(20)  NOT NULL,
+    date_heure     DATETIME     NOT NULL,
+    utilisateur_id INT UNSIGNED NULL,                   -- NULL = changement automatique (installation)
+    CONSTRAINT fk_hs_utilisateur FOREIGN KEY (utilisateur_id) REFERENCES utilisateur (id) ON DELETE SET NULL,
+    CONSTRAINT ck_hs_changement CHECK (ancien_statut <> nouveau_statut),
+    INDEX ix_hs_objet (objet, objet_id, date_heure)
 ) ENGINE=InnoDB;

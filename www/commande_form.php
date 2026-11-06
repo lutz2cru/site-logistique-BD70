@@ -228,6 +228,7 @@ entete($cmd ? "Commande {$cmd['numero']}" : 'Nouvelle commande', 'commandes.php'
         <?php elseif ($cmd['statut'] === 'preparee'): ?><p><a href="colisage.php?id=<?= $id ?>">Voir les colis et palettes</a></p><?php endif; ?>
     </div>
 </div>
+<?php carte_historique_statuts('commande', $id); ?>
 <p><a href="commandes.php">← Retour aux commandes</a></p>
 <?php endif; ?>
 <?php pied();

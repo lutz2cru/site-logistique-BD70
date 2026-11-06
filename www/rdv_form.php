@@ -187,4 +187,5 @@ entete($rdv ? "Rendez-vous {$rdv['numero']}" : 'Nouveau rendez-vous', 'rdv.php')
     </form>
 </div>
 <?php endif; ?>
+<?php if ($rdv) { carte_historique_statuts('rendez_vous', $id, !$estTransporteur); } ?>
 <?php pied();

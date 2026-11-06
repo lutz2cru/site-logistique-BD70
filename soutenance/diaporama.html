@@ -80,7 +80,7 @@ function fit() { document.querySelectorAll('.frame').forEach(f => f.firstElement
 <div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#EAE6DC;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
 <p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#B85A1C;line-height:1">03</p>
 <h3 style="font-size:32px;font-weight:700">Schéma relationnel</h3>
-<p style="font-size:24px;line-height:1.45;color:#3A4558">45 tables en 3NF, clés métier en UNIQUE, contraintes CHECK</p>
+<p style="font-size:24px;line-height:1.45;color:#3A4558">46 tables en 3NF, clés métier en UNIQUE, contraintes CHECK</p>
 </div>
 <div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#14213D;color:#F6F4EE;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
 <p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#E8772E;line-height:1">04</p>
@@ -92,7 +92,7 @@ function fit() { document.querySelectorAll('.frame').forEach(f => f.firstElement
 <p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#5A6474">Livrables : uml/use_case_entrepot.svg · uml/diagramme_entite_association.svg · uml/schema_relationnel.svg</p>
 
 </section>
-</div></div><p class="notes"><b>Diapo 3</b> — [Orateur 2] Notre démarche a suivi le cours : d’abord les cas d’utilisation, en relisant le sujet phrase par phrase, puis le modèle entité-association — 33 entités et 46 associations — puis sa traduction en 45 tables en troisième forme normale. Les N:N deviennent des tables de jointure, les identifiants métier (SIRET, immatriculation) sont déclarés UNIQUE, et chaque table a une clé artificielle id. Enfin la base, avec son automatisation, et le site. Nous avons vérifié la cohérence dans les deux sens : aucun élément du modèle ne sort du périmètre. (≈ 40 s)</p><div class="frame"><div class="scale"><section id="modele" data-transition="fade" style="position:relative;width:1920px;height:1080px;box-sizing:border-box;overflow:hidden;background:#F6F4EE;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+</div></div><p class="notes"><b>Diapo 3</b> — [Orateur 2] Notre démarche a suivi le cours : d’abord les cas d’utilisation, en relisant le sujet phrase par phrase, puis le modèle entité-association — 33 entités et 46 associations — puis sa traduction en 46 tables en troisième forme normale, dont un journal technique des statuts. Les N:N deviennent des tables de jointure, les identifiants métier (SIRET, immatriculation) sont déclarés UNIQUE, et chaque table a une clé artificielle id. Enfin la base, avec son automatisation, et le site. Nous avons vérifié la cohérence dans les deux sens : aucun élément du modèle ne sort du périmètre. (≈ 40 s)</p><div class="frame"><div class="scale"><section id="modele" data-transition="fade" style="position:relative;width:1920px;height:1080px;box-sizing:border-box;overflow:hidden;background:#F6F4EE;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
 <div style="display:flex;flex-direction:column;gap:12px">
 <p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B85A1C;font-weight:700">Modèle conceptuel</p>
 <h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Quatre choix qui structurent le modèle</h2>
@@ -154,12 +154,12 @@ function fit() { document.querySelectorAll('.frame').forEach(f => f.firstElement
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
 <h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Historiser</h3>
-<p style="font-size:24px;line-height:1.45;color:#BFC8D6">mouvement_stock immuable : une erreur se corrige par un ajustement</p>
+<p style="font-size:24px;line-height:1.45;color:#BFC8D6">mouvement_stock immuable, journal automatique de chaque changement de statut</p>
 </div>
 </div>
 
 </section>
-</div></div><p class="notes"><b>Diapo 5</b> — [Orateur 3] Notre choix le plus structurant : les règles métier sont dans la base, pas seulement dans le PHP. 20 déclencheurs, 6 procédures, 4 fonctions et 5 vues. Par exemple, un rendez-vous qui chevauche un autre sur le même quai est refusé par un déclencheur, même si on insère directement en SQL. Le stock n’est jamais saisi : il est recalculé à chaque mouvement, et la table des mouvements est immuable — on ne modifie pas, on ajuste. Preuve : nos 120 000 lignes de données factices ont été générées en passant par ces déclencheurs, elles respectent donc toutes les règles. (≈ 45 s)</p><div class="frame"><div class="scale"><section id="securite" data-transition="fade" style="position:relative;width:1920px;height:1080px;box-sizing:border-box;overflow:hidden;background:#EAE6DC;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
+</div></div><p class="notes"><b>Diapo 5</b> — [Orateur 3] Notre choix le plus structurant : les règles métier sont dans la base, pas seulement dans le PHP. 27 déclencheurs, 7 procédures, 4 fonctions et 5 vues. Par exemple, un rendez-vous qui chevauche un autre sur le même quai est refusé par un déclencheur, même si on insère directement en SQL. Le stock n’est jamais saisi : il est recalculé à chaque mouvement, et la table des mouvements est immuable — on ne modifie pas, on ajuste. Et chaque changement de statut d’un rendez-vous, d’une commande ou d’un quai est journalisé par la base elle-même, avec son heure et son auteur. Preuve : nos 120 000 lignes de données factices ont été générées en passant par ces déclencheurs, elles respectent donc toutes les règles. (≈ 45 s)</p><div class="frame"><div class="scale"><section id="securite" data-transition="fade" style="position:relative;width:1920px;height:1080px;box-sizing:border-box;overflow:hidden;background:#EAE6DC;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
 <div style="display:flex;flex-direction:column;gap:12px">
 <p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B85A1C;font-weight:700">Sécurité et confidentialité</p>
 <h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Chaque risque a sa parade</h2>

@@ -24,7 +24,7 @@ Le schéma utilise `CREATE SEQUENCE`, propre à MariaDB : il ne s'installe pas s
    - ou copier le dossier `www` dans `C:\xampp\htdocs\entrepot` et ouvrir <http://localhost/entrepot>.
 
 Les paramètres de connexion sont dans `www/config.php`. Le site n'utilise pas `root` : `entrepot_app`
-peut lire la base et écrire dans les tables métier, mais ni dans `stock` (tenu par les
+peut lire la base et écrire dans les tables métier, mais ni dans `stock` ni dans `historique_statut` (tenus par les
 déclencheurs) ni dans la structure. Son mot de passe, de démonstration, est à changer pour un vrai
 déploiement (dans `sql/installer.php` et `www/config.php`).
 
@@ -62,7 +62,7 @@ Deux inscriptions sont en attente de validation (menu *Administration › Utilis
 
 ```
 sql/
-  01_schema.sql            modèle relationnel : 45 tables, clés, contraintes CHECK, index
+  01_schema.sql            modèle relationnel : 46 tables, clés, contraintes CHECK, index
   02_automatisation.sql    fonctions, procédures, déclencheurs, vues
   installer.php            installation + génération des données factices
   performances.php         mesure des requêtes principales (écrit les mesures dans docs/rapport_performances.md)
@@ -81,11 +81,11 @@ sujet/                     énoncé du projet (A26) et grille d'évaluation SI70
 | Module | Écrans |
 |---|---|
 | Authentification | connexion, inscription (validée par l'administrateur), 5 profils aux droits distincts, gestion des comptes |
-| Quais et rendez-vous | planning journalier des quais, prise / modification / annulation de RDV avec recherche des quais compatibles et libres, gestion des quais (équipements, véhicules acceptés, hors service) |
+| Quais et rendez-vous | planning journalier des quais, prise / modification / annulation de RDV avec recherche des quais compatibles et libres, gestion des quais (équipements, véhicules acceptés, hors service), historique des changements de statut |
 | Flux de camions | arrivées avec ou sans RDV (détection des retards), tableau des camions sur site avec horodatage de chaque étape en un clic, proposition d'un quai libre compatible, historique et durées (attente, immobilisation) |
 | Réception | avis d'expédition, réception par lots (DLC, état des palettes), calcul automatique des écarts à la clôture, réserves au transporteur, rangement |
 | Emplacements et stocks | recherche multicritère (plein texte, client, zone, DLC…), export CSV, carte des emplacements, transferts, ajustements d'inventaire, historique des mouvements, traçabilité complète d'un lot |
-| Commandes et préparation | commandes clients (ajout, modification, annulation, suppression, recherche), génération FIFO/FEFO et affectation des listes, prélèvement avec signalement des manquants |
+| Commandes et préparation | commandes clients (ajout, modification, annulation, suppression, recherche), génération FIFO/FEFO et affectation des listes (alerte si le stock ne couvre pas toute la commande), prélèvement avec signalement des manquants |
 | Expédition | constitution des colis et palettes (SSCC), chargement du camion avec contrôle de sa capacité, bon de livraison et lettre de voiture imprimables, passage à « expédiée » au départ du camion |
 | Référentiels | ajout / modification / suppression / recherche pour transporteurs, contacts, contrats, chauffeurs, véhicules, articles, clients, fournisseurs, zones, allées, racks, emplacements… |
 | Pilotage | indicateurs sur période (occupation des quais, attentes par transporteur, remplissage par zone, taux d'écart fournisseurs, productivité des préparateurs, DLC proches), graphiques, rapport imprimable |
@@ -103,4 +103,7 @@ de livraison et une lettre de voiture, qui regroupent toutes ses commandes.
   stock suffisant, emplacement bloqué, capacité de l'emplacement (palettes et poids), compatibilité produit / zone.
 - **Mises à jour automatiques** : statut des quais et des RDV selon les étapes, stock recalculé à chaque mouvement,
   avis réceptionné et écarts calculés à la clôture de la réception (constats par article et type d'écart).
-- **Historisation** : `mouvement_stock` immuable (daté, avec son auteur et son motif), étapes des passages horodatées.
+- **Historisation** : `mouvement_stock` et `passage_etape` immuables (datés ; un mouvement garde son auteur et son motif).
+  Un journal `historique_statut`, écrit uniquement par déclencheur, garde chaque changement de statut d'un rendez-vous,
+  d'une commande ou d'un quai, avec son heure et son auteur (variable de session `@utilisateur_id` posée par le site).
+  Il est affiché sur les fiches rendez-vous, commande et quai.

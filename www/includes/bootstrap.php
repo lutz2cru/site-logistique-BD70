@@ -30,6 +30,10 @@ function db(): PDO
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ]);
+        // auteur des changements de statut, lu par les déclencheurs du journal (historique_statut)
+        if (isset($_SESSION['utilisateur']['id'])) {
+            $pdo->prepare('SET @utilisateur_id = ?')->execute([(int) $_SESSION['utilisateur']['id']]);
+        }
     }
     return $pdo;
 }

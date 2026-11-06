@@ -32,8 +32,8 @@
 </div>
 <div style="display:flex;flex-direction:column;gap:10px">
 <h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Historiser</h3>
-<p style="font-size:24px;line-height:1.45;color:#BFC8D6">mouvement_stock immuable : une erreur se corrige par un ajustement</p>
+<p style="font-size:24px;line-height:1.45;color:#BFC8D6">mouvement_stock immuable, journal automatique de chaque changement de statut</p>
 </div>
 </div>
-<aside>[Orateur 3] Notre choix le plus structurant : les règles métier sont dans la base, pas seulement dans le PHP. 20 déclencheurs, 6 procédures, 4 fonctions et 5 vues. Par exemple, un rendez-vous qui chevauche un autre sur le même quai est refusé par un déclencheur, même si on insère directement en SQL. Le stock n’est jamais saisi : il est recalculé à chaque mouvement, et la table des mouvements est immuable — on ne modifie pas, on ajuste. Preuve : nos 120 000 lignes de données factices ont été générées en passant par ces déclencheurs, elles respectent donc toutes les règles. (≈ 45 s)</aside>
+<aside>[Orateur 3] Notre choix le plus structurant : les règles métier sont dans la base, pas seulement dans le PHP. 27 déclencheurs, 7 procédures, 4 fonctions et 5 vues. Par exemple, un rendez-vous qui chevauche un autre sur le même quai est refusé par un déclencheur, même si on insère directement en SQL. Le stock n’est jamais saisi : il est recalculé à chaque mouvement, et la table des mouvements est immuable — on ne modifie pas, on ajuste. Et chaque changement de statut d’un rendez-vous, d’une commande ou d’un quai est journalisé par la base elle-même, avec son heure et son auteur. Preuve : nos 120 000 lignes de données factices ont été générées en passant par ces déclencheurs, elles respectent donc toutes les règles. (≈ 45 s)</aside>
 </section>

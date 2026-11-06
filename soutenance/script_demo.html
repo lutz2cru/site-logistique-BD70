@@ -223,10 +223,10 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
       <div class="body">
         <h3>6 · Traçabilité complète d’un lot</h3>
         <ol class="steps">
-          <li><span class="ui">Stocks › Traçabilité d’un lot</span>, saisir <code>L00000066</code>, <span class="ui">Tracer</span>.</li>
+          <li><span class="ui">Stocks › Traçabilité d’un lot</span>, saisir <code>L00000625</code>, <span class="ui">Tracer</span>.</li>
           <li>Descendre les 4 parties : réception, emplacements successifs, prélèvements, expédition.</li>
         </ol>
-        <p class="expect">réception REC-000028, un transfert entre deux emplacements, 3 commandes (FIFO et FEFO), 3 camions avec leurs BL et lettres de voiture.</p>
+        <p class="expect">réception REC-000277, un transfert entre deux emplacements, 3 commandes (FIFO et FEFO), 3 camions avec leurs BL et lettres de voiture.</p>
         <p class="say">« C’est la demande du sujet : retrouver un lot de sa réception jusqu’au camion qui l’a emporté. Tout est reconstitué par jointures, rien n’est recopié. »</p>
         <p class="why"><b>Notions :</b> chaîne de jointures sur les clés étrangères, ternaire Prélever → <code>ligne_prelevement</code>, index <code>ix_mvt_lot_date</code> (×20).</p>
       </div>
