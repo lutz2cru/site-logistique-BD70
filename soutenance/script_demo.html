@@ -114,12 +114,12 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
 </header>
 
 <section aria-labelledby="h-fen">
-  <h2 id="h-fen">Trois fenêtres déjà connectées</h2>
-  <p class="muted">Une session PHP par navigateur : on ne se déconnecte jamais pendant la démo, on change de fenêtre.</p>
+  <h2 id="h-fen">Trois onglets déjà connectés</h2>
+  <p class="muted">Le navigateur garde une session par adresse. Trois onglets sur <span class="mono">localhost:8080</span> partagent donc le même utilisateur. Il faut ouvrir chaque profil sur sa propre adresse : <span class="mono">accueil.localhost</span>, <span class="mono">magasin.localhost</span>, etc. Ces adresses mènent toutes au même site sur votre machine, et chacune a sa propre session. Tout tient dans un seul navigateur, et on ne se déconnecte jamais pendant la démo : on change d’onglet.</p>
   <div class="windows">
-    <div class="win"><span class="n">Fenêtre 1</span><b>Agent d’accueil</b><span class="mono">agent.accueil@entrepot-logistique.fr</span><small>navigateur normal</small></div>
-    <div class="win"><span class="n">Fenêtre 2</span><b>Magasinier</b><span class="mono">operateur.magasin@entrepot-logistique.fr</span><small>fenêtre de navigation privée</small></div>
-    <div class="win"><span class="n">Fenêtre 3</span><b>Responsable</b><span class="mono">responsable.exploitation@entrepot-logistique.fr</span><small>un autre navigateur</small></div>
+    <div class="win"><span class="n">Onglet 1</span><b>Agent d’accueil</b><span class="mono">http://accueil.localhost:8080</span><span class="mono">agent.accueil@entrepot-logistique.fr</span></div>
+    <div class="win"><span class="n">Onglet 2</span><b>Magasinier</b><span class="mono">http://magasin.localhost:8080</span><span class="mono">operateur.magasin@entrepot-logistique.fr</span></div>
+    <div class="win"><span class="n">Onglet 3</span><b>Responsable</b><span class="mono">http://responsable.localhost:8080</span><span class="mono">responsable.exploitation@entrepot-logistique.fr</span></div>
   </div>
 </section>
 
@@ -132,7 +132,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
   <ul class="check" id="check">
     <li><label><input type="checkbox" id="c1"><span class="t">Démarrer MySQL dans XAMPP, puis lancer <code>C:\xampp\php\php.exe sql/installer.php</code> (environ 1 min 30).</span></label></li>
     <li><label><input type="checkbox" id="c2"><span class="t">Lancer le site : <code>C:\xampp\php\php.exe -S localhost:8080 -t www</code>.</span></label></li>
-    <li><label><input type="checkbox" id="c3"><span class="t">Ouvrir les 3 fenêtres et s’y connecter. Zoom navigateur à 125 % pour le vidéoprojecteur.</span></label></li>
+    <li><label><input type="checkbox" id="c3"><span class="t">Ouvrir les 3 onglets, chacun sur son adresse, et s’y connecter. Zoom navigateur à 125 % pour le vidéoprojecteur.</span></label></li>
     <li><label><input type="checkbox" id="c4"><span class="t">Repérer pour la scène 2 un quai déjà réservé <b>demain</b> (Planning des quais, flèche →) et noter son créneau.</span></label></li>
     <li><label><input type="checkbox" id="c5"><span class="t">Repérer pour la scène 3 un rendez-vous <b>Réception</b> encore à venir dans « Rendez-vous attendus aujourd’hui ».</span></label></li>
     <li><label><input type="checkbox" id="c6"><span class="t">Repérer pour la scène 4 un avis d’expédition attendu avec des articles <b>ambiants</b> (la zone produits dangereux est presque pleine).</span></label></li>
@@ -142,10 +142,10 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
 
 <section aria-labelledby="h-court">
   <h2 id="h-court">Version courte · 4 min</h2>
-  <p class="muted">Pour un point rapide : pas de saisie longue, que des écrans qui marchent du premier coup. Les mêmes 3 fenêtres. Il suffit de repérer un quai réservé demain (case 4 ci-dessus).</p>
+  <p class="muted">Pour un point rapide : pas de saisie longue, que des écrans qui marchent du premier coup. Les mêmes 3 onglets. Il suffit de repérer un quai réservé demain (case 4 ci-dessus).</p>
   <div class="scenes">
     <article class="scene-s">
-      <div class="when"><span class="t">0:00–0:40</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="when"><span class="t">0:00–0:40</span><span class="pill w1">Onglet 1</span></div>
       <div class="body">
         <h3>1 · Connexion et menu par profil</h3>
         <p>Montrer la page de connexion, puis le tableau de bord de l’agent d’accueil. Pointer le menu.</p>
@@ -153,7 +153,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
       </div>
     </article>
     <article class="scene-s">
-      <div class="when"><span class="t">0:40–1:40</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="when"><span class="t">0:40–1:40</span><span class="pill w1">Onglet 1</span></div>
       <div class="body">
         <h3>2 · Un rendez-vous qui chevauche est refusé</h3>
         <p><span class="ui">Planning des quais</span>, demain : créer un rendez-vous sur le créneau d’un quai déjà réservé. Lire le message de refus.</p>
@@ -161,7 +161,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
       </div>
     </article>
     <article class="scene-s">
-      <div class="when"><span class="t">1:40–2:50</span><span class="pill w2">Fenêtre 2</span></div>
+      <div class="when"><span class="t">1:40–2:50</span><span class="pill w2">Onglet 2</span></div>
       <div class="body">
         <h3>3 · Chercher du stock et tracer un lot</h3>
         <p><span class="ui">Recherche de stock</span> avec deux ou trois filtres, puis <span class="ui">Traçabilité d’un lot</span> : <code>L00000625</code>.</p>
@@ -169,7 +169,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
       </div>
     </article>
     <article class="scene-s">
-      <div class="when"><span class="t">2:50–4:00</span><span class="pill">Fenêtre 3</span></div>
+      <div class="when"><span class="t">2:50–4:00</span><span class="pill">Onglet 3</span></div>
       <div class="body">
         <h3>4 · Indicateurs et rapport</h3>
         <p><span class="ui">Indicateurs</span> : chiffres clés, graphiques, <span class="ui">Imprimer le rapport</span>. S’il reste du temps : modifier une fiche dans <span class="ui">Transporteurs</span>.</p>
@@ -194,7 +194,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
   <div class="scenes" id="scenes">
 
     <article class="scene" data-from="0" data-to="25">
-      <div class="when"><span class="t">0:00–0:25</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="when"><span class="t">0:00–0:25</span><span class="pill w1">Onglet 1</span></div>
       <div class="body">
         <h3>1 · Tableau de bord de l’accueil</h3>
         <ol class="steps">
@@ -207,7 +207,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     </article>
 
     <article class="scene" data-from="25" data-to="75">
-      <div class="when"><span class="t">0:25–1:15</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="when"><span class="t">0:25–1:15</span><span class="pill w1">Onglet 1</span></div>
       <div class="body">
         <h3>2 · Un rendez-vous qui chevauche est refusé</h3>
         <ol class="steps">
@@ -223,7 +223,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     </article>
 
     <article class="scene" data-from="75" data-to="120">
-      <div class="when"><span class="t">1:15–2:00</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="when"><span class="t">1:15–2:00</span><span class="pill w1">Onglet 1</span></div>
       <div class="body">
         <h3>3 · Le camion arrive et passe les étapes</h3>
         <ol class="steps">
@@ -238,7 +238,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     </article>
 
     <article class="scene" data-from="120" data-to="200">
-      <div class="when"><span class="t">2:00–3:20</span><span class="pill w2">Fenêtre 2</span></div>
+      <div class="when"><span class="t">2:00–3:20</span><span class="pill w2">Onglet 2</span></div>
       <div class="body">
         <h3>4 · Réception : la base calcule les écarts</h3>
         <ol class="steps">
@@ -254,7 +254,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     </article>
 
     <article class="scene" data-from="200" data-to="235">
-      <div class="when"><span class="t">3:20–3:55</span><span class="pill w2">Fenêtre 2</span></div>
+      <div class="when"><span class="t">3:20–3:55</span><span class="pill w2">Onglet 2</span></div>
       <div class="body">
         <h3>5 · Rangement : la compatibilité produit / zone</h3>
         <ol class="steps">
@@ -269,7 +269,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     </article>
 
     <article class="scene" data-from="235" data-to="270">
-      <div class="when"><span class="t">3:55–4:30</span><span class="pill w2">Fenêtre 2</span></div>
+      <div class="when"><span class="t">3:55–4:30</span><span class="pill w2">Onglet 2</span></div>
       <div class="body">
         <h3>6 · Traçabilité complète d’un lot</h3>
         <ol class="steps">
@@ -283,7 +283,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     </article>
 
     <article class="scene" data-from="270" data-to="300">
-      <div class="when"><span class="t">4:30–5:00</span><span class="pill">Fenêtre 3</span></div>
+      <div class="when"><span class="t">4:30–5:00</span><span class="pill">Onglet 3</span></div>
       <div class="body">
         <h3>7 · Indicateurs du responsable</h3>
         <ol class="steps">
