@@ -5,8 +5,8 @@
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px 64px">
 <div style="display:flex;flex-direction:column;gap:12px;border-top:2px solid #3D4C6B;padding:24px 0 0 0">
-<h3 style="font-size:36px;font-weight:700;color:#E8772E">PHP et MariaDB</h3>
-<p style="font-size:28px;line-height:1.4;color:#D5DBE5">Des outils simples, vus en cours, qui tournent sur un poste avec XAMPP</p>
+<h3 style="font-size:36px;font-weight:700;color:#E8772E">PHP natif, sans framework</h3>
+<p style="font-size:28px;line-height:1.4;color:#D5DBE5">PHP et PDO avec MariaDB : chaque requête SQL reste visible. Seule bibliothèque : Chart.js</p>
 </div>
 <div style="display:flex;flex-direction:column;gap:12px;border-top:2px solid #3D4C6B;padding:24px 0 0 0">
 <h3 style="font-size:36px;font-weight:700;color:#E8772E">Les règles dans la base</h3>
@@ -17,9 +17,9 @@
 <p style="font-size:28px;line-height:1.4;color:#D5DBE5">Mots de passe hachés, requêtes préparées, chaque profil n’accède qu’à ses pages</p>
 </div>
 <div style="display:flex;flex-direction:column;gap:12px;border-top:2px solid #3D4C6B;padding:24px 0 0 0">
-<h3 style="font-size:36px;font-weight:700;color:#E8772E">Les performances</h3>
-<p style="font-size:28px;line-height:1.4;color:#D5DBE5">Des index sur les recherches fréquentes, testés sur une base de 6,5 millions de lignes</p>
+<h3 style="font-size:36px;font-weight:700;color:#E8772E">Des données réalistes</h3>
+<p style="font-size:28px;line-height:1.4;color:#D5DBE5">Environ 120 000 lignes générées en SQL, qui passent par les mêmes déclencheurs que le site</p>
 </div>
 </div>
-<aside>[Orateur 3] Nos choix techniques. Un : PHP et MariaDB, des outils vus en cours et faciles à installer. Deux : nous avons mis les règles importantes directement dans la base, avec des déclencheurs. Par exemple, la base refuse qu’un quai soit réservé deux fois au même moment, elle met le stock à jour à chaque mouvement, et elle garde l’historique. Trois : la sécurité, avec des mots de passe hachés, des requêtes préparées contre l’injection SQL, et des pages réservées à chaque profil. Quatre : les performances, avec des index sur les recherches les plus courantes ; nous les avons testés sur une base de 6,5 millions de lignes. (≈ 50 s)</aside>
+<aside>[Orateur 3] Nos choix techniques. Un : pas de framework. Le site est en PHP natif, avec PDO pour parler à MariaDB ; ce sont les outils vus en cours, et chaque requête SQL est écrite à la main, donc visible et explicable. La seule bibliothèque externe est Chart.js, pour les graphiques des indicateurs. Deux : nous avons mis les règles importantes directement dans la base, avec des déclencheurs. Par exemple, la base refuse qu’un quai soit réservé deux fois au même moment, elle met le stock à jour à chaque mouvement, et elle garde l’historique. Trois : la sécurité, avec des mots de passe hachés, des requêtes préparées contre l’injection SQL, et des pages réservées à chaque profil. Quatre : des données de test réalistes, environ 120 000 lignes générées en SQL ; elles passent par les mêmes déclencheurs que le site, donc elles respectent toutes les règles. (≈ 50 s)</aside>
 </section>
