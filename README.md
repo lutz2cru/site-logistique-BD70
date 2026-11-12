@@ -62,7 +62,7 @@ Deux inscriptions sont en attente de validation (menu *Administration › Utilis
 
 ```
 sql/
-  01_schema.sql            modèle relationnel : 46 tables, clés, contraintes CHECK, index
+  01_schema.sql            modèle relationnel : 47 tables, clés, contraintes CHECK, index
   02_automatisation.sql    fonctions, procédures, déclencheurs, vues
   installer.php            installation + génération des données factices
   performances.php         mesure des requêtes principales (écrit les mesures dans docs/rapport_performances.md)
@@ -81,7 +81,7 @@ sujet/                     énoncé du projet (A26) et grille d'évaluation SI70
 | Module | Écrans |
 |---|---|
 | Authentification | connexion, inscription (validée par l'administrateur), 5 profils aux droits distincts, gestion des comptes |
-| Quais et rendez-vous | planning journalier des quais, prise / modification / annulation de RDV avec recherche des quais compatibles et libres, gestion des quais (équipements, véhicules acceptés, hors service), historique des changements de statut |
+| Quais et rendez-vous | planning journalier des quais avec les évènements du site (maintenance, nettoyage, inventaire, audit, formation, jours fériés), prise / modification / annulation de RDV avec recherche des quais compatibles et libres, gestion des quais (équipements, véhicules acceptés, hors service), historique des changements de statut |
 | Flux de camions | arrivées avec ou sans RDV (détection des retards), tableau des camions sur site avec horodatage de chaque étape en un clic, proposition d'un quai libre compatible, historique et durées (attente, immobilisation) |
 | Réception | avis d'expédition, réception par lots (DLC, état des palettes), calcul automatique des écarts à la clôture, réserves au transporteur, rangement |
 | Emplacements et stocks | recherche multicritère (plein texte, client, zone, DLC…), export CSV, carte des emplacements, transferts, ajustements d'inventaire, historique des mouvements, traçabilité complète d'un lot |
@@ -98,7 +98,7 @@ de livraison et une lettre de voiture, qui regroupent toutes ses commandes.
 ## Automatisation dans la base
 
 - **Numérotation** des documents (RDV-, PAS-, REC-, MVT-…) par séquences dans les déclencheurs.
-- **Contrôles métier** : chevauchement de RDV sur un quai ou pour un véhicule, compatibilité véhicule / quai / sens
+- **Contrôles métier** : chevauchement de RDV sur un quai ou pour un véhicule, RDV refusé sur un créneau bloqué par un évènement du planning, compatibilité véhicule / quai / sens
   (au rendez-vous et à l'appel à quai), ordre chronologique des étapes, quai libre à l'appel, véhicule déjà sur site,
   stock suffisant, emplacement bloqué, capacité de l'emplacement (palettes et poids), compatibilité produit / zone.
 - **Mises à jour automatiques** : statut des quais et des RDV selon les étapes, stock recalculé à chaque mouvement,
@@ -107,3 +107,8 @@ de livraison et une lettre de voiture, qui regroupent toutes ses commandes.
   Un journal `historique_statut`, écrit uniquement par déclencheur, garde chaque changement de statut d'un rendez-vous,
   d'une commande ou d'un quai, avec son heure et son auteur (variable de session `@utilisateur_id` posée par le site).
   Il est affiché sur les fiches rendez-vous, commande et quai.
+- **Évènements programmés** (`CREATE EVENT`, onglet « Évènements » de phpMyAdmin) : `ev_quais_maintenance`
+  passe toutes les 15 min un quai hors service pendant une maintenance ou un nettoyage inscrit au planning et le remet
+  en service à la fin ; `ev_purge_evenements` supprime chaque mois les évènements du planning terminés depuis plus d'un an.
+  L'installeur active le planificateur (`SET GLOBAL event_scheduler = ON`) ; pour qu'il reste actif après un redémarrage
+  de MySQL, ajouter `event_scheduler=ON` dans la section `[mysqld]` de `C:\xampp\mysql\bin\my.ini`.

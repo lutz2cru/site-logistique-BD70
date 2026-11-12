@@ -190,6 +190,12 @@ const STATUTS = [
     'colis' => ['Colis', 'bleu'], 'palette' => ['Palette', 'violet'],
 ];
 
+/** Types d'évènements du planning : [libellé, couleur]. */
+const TYPES_EVENEMENT = [
+    'maintenance' => ['Maintenance', 'orange'], 'nettoyage' => ['Nettoyage', 'bleu'], 'inventaire' => ['Inventaire', 'violet'],
+    'audit' => ['Audit', 'gris'], 'formation' => ['Formation', 'vert'], 'fermeture' => ['Fermeture', 'rouge'],
+];
+
 function pastille(?string $statut): string
 {
     [$lib, $couleur] = STATUTS[$statut] ?? [$statut, 'gris'];

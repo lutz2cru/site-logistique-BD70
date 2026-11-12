@@ -133,7 +133,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     <li><label><input type="checkbox" id="c1"><span class="t">Démarrer MySQL dans XAMPP, puis lancer <code>C:\xampp\php\php.exe sql/installer.php</code> (environ 1 min 30).</span></label></li>
     <li><label><input type="checkbox" id="c2"><span class="t">Lancer le site : <code>C:\xampp\php\php.exe -S localhost:8080 -t www</code>.</span></label></li>
     <li><label><input type="checkbox" id="c3"><span class="t">Ouvrir les 3 onglets, chacun sur son adresse, et s’y connecter. Zoom navigateur à 125 % pour le vidéoprojecteur.</span></label></li>
-    <li><label><input type="checkbox" id="c4"><span class="t">Repérer pour la scène 2 un quai déjà réservé <b>demain</b> (Planning des quais, flèche →) et noter son créneau.</span></label></li>
+    <li><label><input type="checkbox" id="c4"><span class="t">Repérer pour la scène 2, sur le <b>planning du jour</b>, le bloc orange « Maintenance préventive du niveleur » : chaque mercredi de 13 h 30 à 16 h 30, sur <b>Q03</b> (quai réception) la semaine du 18/11. Si la démo n’a pas lieu un mercredi : flèche → jusqu’au mercredi suivant.</span></label></li>
     <li><label><input type="checkbox" id="c5"><span class="t">Repérer pour la scène 3 un rendez-vous <b>Réception</b> encore à venir dans « Rendez-vous attendus aujourd’hui ».</span></label></li>
     <li><label><input type="checkbox" id="c6"><span class="t">Repérer pour la scène 4 un avis d’expédition attendu avec des articles <b>ambiants</b> (la zone produits dangereux est presque pleine).</span></label></li>
     <li><label><input type="checkbox" id="c7"><span class="t">Garder le rapport de projet ouvert (captures d’écran) comme plan B.</span></label></li>
@@ -142,7 +142,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
 
 <section aria-labelledby="h-court">
   <h2 id="h-court">Version courte · 4 min</h2>
-  <p class="muted">Pour un point rapide : pas de saisie longue, que des écrans qui marchent du premier coup. Les mêmes 3 onglets. Il suffit de repérer un quai réservé demain (case 4 ci-dessus).</p>
+  <p class="muted">Pour un point rapide : pas de saisie longue, que des écrans qui marchent du premier coup. Les mêmes 3 onglets. Il suffit de repérer la maintenance du niveleur (case 4 ci-dessus).</p>
   <div class="scenes">
     <article class="scene-s">
       <div class="when"><span class="t">0:00–0:40</span><span class="pill w1">Onglet 1</span></div>
@@ -155,9 +155,9 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     <article class="scene-s">
       <div class="when"><span class="t">0:40–1:40</span><span class="pill w1">Onglet 1</span></div>
       <div class="body">
-        <h3>2 · Un rendez-vous qui chevauche est refusé</h3>
-        <p><span class="ui">Planning des quais</span>, demain : créer un rendez-vous sur le créneau d’un quai déjà réservé. Lire le message de refus.</p>
-        <p class="say">« Le refus vient de la base elle-même, d’un déclencheur. Même une requête SQL directe serait refusée. »</p>
+        <h3>2 · Un rendez-vous pendant une maintenance est refusé</h3>
+        <p><span class="ui">Planning des quais</span> : pointer la maintenance du niveleur sur <b>Q03</b> (13 h 30–16 h 30), puis <span class="ui">+ Nouveau rendez-vous</span> sur Q03 à 14 h 00, sens Réception. Lire le message de refus.</p>
+        <p class="say">« Le planning montre aussi les évènements du site : maintenances, nettoyages, inventaires, jours fériés. Le déclencheur BEFORE INSERT voit la maintenance et refuse le rendez-vous. Même une requête SQL directe serait refusée. »</p>
       </div>
     </article>
     <article class="scene-s">
@@ -185,7 +185,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
   <div class="qa">
     <div><b>Pourquoi y a-t-il déjà des données ?</b><p>Le sujet demande une base remplie de données fictives en quantité. Le script <code>sql/installer.php</code> crée la base, puis simule environ deux mois d’activité (rendez-vous, camions, réceptions, commandes) : environ 120 000 lignes. Elles passent par les déclencheurs et procédures, donc elles respectent toutes les règles. Graine fixe : les mêmes codes à chaque installation.</p></div>
     <div><b>Comment marche la connexion ?</b><p>À l’inscription, le mot de passe est haché (<code>password_hash</code>, bcrypt). À la connexion, <code>password_verify</code> le compare au hash, puis une session PHP s’ouvre avec un nouvel identifiant. Chaque page vérifie le profil côté serveur. Le site se connecte à la base avec un compte limité, <code>entrepot_app</code>, qui ne peut pas écrire dans le stock.</p></div>
-    <div><b>Y a-t-il des automatisations dans la base ?</b><p>Oui, dans <code>sql/02_automatisation.sql</code> : 27 déclencheurs, 7 procédures, 4 fonctions et 5 vues. Ils contrôlent (chevauchement de rendez-vous, zone compatible), mettent à jour (stock, statut des quais) et historisent (journal des statuts, mouvements jamais supprimés).</p></div>
+    <div><b>Y a-t-il des automatisations dans la base ?</b><p>Oui, dans <code>sql/02_automatisation.sql</code> : 29 déclencheurs, 8 procédures, 4 fonctions, 5 vues et 2 évènements programmés. Ils contrôlent (chevauchement de rendez-vous, créneau bloqué par une maintenance, zone compatible), mettent à jour (stock, statut des quais) et historisent (journal des statuts, mouvements jamais supprimés). Les évènements programmés tournent seuls : toutes les 15 min, un quai en maintenance passe hors service puis revient en service à la fin.</p></div>
   </div>
 </section>
 
@@ -209,16 +209,16 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     <article class="scene" data-from="25" data-to="75">
       <div class="when"><span class="t">0:25–1:15</span><span class="pill w1">Onglet 1</span></div>
       <div class="body">
-        <h3>2 · Un rendez-vous qui chevauche est refusé</h3>
+        <h3>2 · Un rendez-vous pendant une maintenance est refusé</h3>
         <ol class="steps">
-          <li><span class="ui">Quais et rendez-vous › Planning des quais</span>, flèche <span class="ui">→</span> pour demain : montrer le quai réservé repéré.</li>
-          <li><span class="ui">+ Nouveau rendez-vous</span> : un véhicule, sens Réception, date de demain, une heure dans ce créneau.</li>
-          <li>Choisir <b>directement ce quai</b> dans la liste Quai, puis <span class="ui">Enregistrer</span>.</li>
-          <li>La page propose alors les quais compatibles et libres : en cocher un, <span class="ui">Enregistrer</span>.</li>
+          <li><span class="ui">Quais et rendez-vous › Planning des quais</span> (aujourd’hui) : pointer le bloc orange « Maintenance préventive du niveleur » sur <b>Q03</b>, de 13 h 30 à 16 h 30, et le tableau « Évènements du jour » en bas de page. Au passage : Q12 est hors service pour une réparation.</li>
+          <li><span class="ui">+ Nouveau rendez-vous</span> : un véhicule (testé : <code>LR-009-II</code>), sens <b>Réception</b>, date du jour, <b>14:00</b>, durée 1 h.</li>
+          <li>Choisir <b>directement Q03</b> dans la liste Quai, puis <span class="ui">Enregistrer</span>.</li>
+          <li>La page propose alors les quais compatibles et libres, sans Q03 : en cocher un, <span class="ui">Enregistrer</span>.</li>
         </ol>
-        <p class="expect">« Ce créneau chevauche un autre rendez-vous sur ce quai. », puis la liste des quais libres (testé : Q03, Q05, Q06, Q16).</p>
-        <p class="say">« Le refus vient d’un déclencheur. Même une insertion directe en SQL serait refusée. La liste proposée applique la compatibilité entre le type de véhicule et le quai. »</p>
-        <p class="why"><b>Notions :</b> déclencheur BEFORE INSERT avec SIGNAL, index composite <code>ix_rdv_quai_creneau</code> (×15), jointure Véhicule → Type de véhicule ← Accepter ← Quai, sous-requête NOT EXISTS.</p>
+        <p class="expect">« Ce créneau est bloqué par un évènement du planning : Maintenance préventive du niveleur. », puis la liste des quais libres (testé le 12/11 : Q01, Q05, Q06, Q13, Q14…).</p>
+        <p class="say">« La maintenance est inscrite au planning par le responsable. Quand on enregistre le rendez-vous, le déclencheur BEFORE INSERT la voit et refuse avec SIGNAL ; le même déclencheur refuse aussi un chevauchement avec un autre rendez-vous. Même une insertion directe en SQL serait refusée. Et pendant la maintenance, un évènement programmé passe Q03 hors service, puis le remet en service à 16 h 30. »</p>
+        <p class="why"><b>Notions :</b> déclencheur BEFORE INSERT avec SIGNAL (procédures <code>verifier_rendez_vous</code> et <code>verifier_evenement</code>), table <code>evenement</code> (Concerner : quai 0..1), index composite <code>ix_rdv_quai_creneau</code> (×15), jointure Véhicule → Type de véhicule ← Accepter ← Quai, sous-requête NOT EXISTS.</p>
       </div>
     </article>
 
@@ -315,6 +315,7 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
     <div><b>Pourquoi le stock n’est pas saisi à la main ?</b><p>C’est une synthèse des mouvements, tenue par déclencheur. Le compte du site n’a pas le droit d’y écrire.</p></div>
     <div><b>Pourquoi le passage est séparé du rendez-vous ?</b><p>L’un est prévu, l’autre réel : c’est ce qui permet de mesurer les retards et d’accueillir un camion sans rendez-vous.</p></div>
     <div><b>Les indicateurs sont-ils stockés ?</b><p>Non, ils sont recalculés depuis les étapes horodatées, les constats et les listes. Rien à resynchroniser.</p></div>
+    <div><b>Évènement du planning ou évènement MySQL ?</b><p>Un évènement du planning est une donnée (une ligne de la table <code>evenement</code>). Un évènement MySQL est une tâche que le serveur exécute seul, visible dans l’onglet Évènements de phpMyAdmin : <code>ev_quais_maintenance</code> s’appuie sur les premiers pour mettre les quais hors service.</p></div>
   </div>
 </section>
 </div>
