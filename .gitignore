@@ -1,1 +1,8 @@
 *.bkp
+
+# Outils locaux
+.claude/
+
+# Préparation personnelle de la soutenance (seul le .pptx est rendu)
+soutenance/*
+!soutenance/*.pptx
