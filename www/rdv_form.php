@@ -52,8 +52,12 @@ function quais_disponibles(array $v, int $rdvId, DateTime $debut, DateTime $fin)
                       AND NOT EXISTS (SELECT 1 FROM rendez_vous r WHERE r.quai_id = q.id AND r.id <> ?
                                        AND r.statut IN ('planifie','honore') AND r.debut > ? - INTERVAL 4 HOUR
                                        AND r.debut < ? AND r.fin > ?)
+                      AND NOT EXISTS (SELECT 1 FROM evenement ev WHERE ev.bloquant
+                                       AND (ev.quai_id = q.id OR ev.quai_id IS NULL)
+                                       AND ev.debut < ? AND ev.fin > ?)
                     GROUP BY q.id ORDER BY q.type = 'mixte', q.numero",
-        [$v['vehicule_id'], $v['sens'], $rdvId, $debut->format('Y-m-d H:i'), $fin->format('Y-m-d H:i'), $debut->format('Y-m-d H:i')]);
+        [$v['vehicule_id'], $v['sens'], $rdvId, $debut->format('Y-m-d H:i'), $fin->format('Y-m-d H:i'), $debut->format('Y-m-d H:i'),
+         $fin->format('Y-m-d H:i'), $debut->format('Y-m-d H:i')]);
 }
 
 if (est_post()) {

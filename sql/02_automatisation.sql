@@ -5,6 +5,7 @@
 --     statut des quais, journal des changements de statut, immuabilité
 --     des mouvements de stock et des étapes de passage)
 --   - vues d'indicateurs
+--   - évènements programmés (maintenance des quais, purge du planning)
 -- =====================================================================
 USE entrepot;
 
@@ -14,7 +15,11 @@ DELIMITER $$
 --  FONCTIONS
 -- =====================================================================
 
--- Nombre de palettes occupées par une quantité d'un article
+-- Calcule le nombre de palettes nécessaires pour une quantité d'un article.
+-- `p_article_id` désigne l'article et `p_quantite` le nombre d'unités à stocker ;
+-- le nombre d'unités par palette est déduit du conditionnement de l'article.
+-- Le résultat est arrondi à la palette supérieure : une palette partiellement
+-- remplie compte donc comme une palette occupée.
 CREATE FUNCTION fn_palettes(p_article_id INT UNSIGNED, p_quantite INT UNSIGNED)
 RETURNS INT UNSIGNED
 READS SQL DATA
@@ -25,7 +30,10 @@ BEGIN
     RETURN CEIL(p_quantite / v_par_palette);
 END$$
 
--- Horodatage d'une étape donnée d'un passage (NULL si non franchie)
+-- Recherche la date et l'heure auxquelles un passage a franchi une étape.
+-- `p_passage_id` identifie la visite du camion et `p_code` l'étape recherchée
+-- dans le référentiel `type_etape` ; le résultat est NULL si cette étape n'est
+-- pas enregistrée pour le passage.
 CREATE FUNCTION fn_date_etape(p_passage_id INT UNSIGNED, p_code VARCHAR(20))
 RETURNS DATETIME
 READS SQL DATA
@@ -37,7 +45,10 @@ BEGIN
     RETURN v_date;
 END$$
 
--- Palettes libres sur un emplacement
+-- Calcule le nombre de palettes encore disponibles sur un emplacement.
+-- La capacité totale vient de l'emplacement ; l'occupation est calculée en
+-- additionnant les palettes requises par chacun des lots présents dans `stock`.
+-- Un emplacement vide a donc toute sa capacité disponible.
 CREATE FUNCTION fn_palettes_libres(p_emplacement_id INT UNSIGNED)
 RETURNS INT
 READS SQL DATA
@@ -51,7 +62,10 @@ BEGIN
     RETURN v_capacite - v_occupees;
 END$$
 
--- Poids encore admissible sur un emplacement (en kg)
+-- Calcule la marge de poids encore admissible sur un emplacement, en kilogrammes.
+-- Le poids actuellement stocké est obtenu à partir des quantités et du poids
+-- unitaire des articles correspondant aux lots présents sur l'emplacement ;
+-- cette valeur est soustraite du poids maximal configuré pour cet emplacement.
 CREATE FUNCTION fn_poids_libre(p_emplacement_id INT UNSIGNED)
 RETURNS DECIMAL(12,3)
 READS SQL DATA
@@ -70,13 +84,16 @@ END$$
 -- =====================================================================
 
 -- Contrôle d'un rendez-vous : quai en service, sens compatible avec le
--- type de quai, véhicule compatible, absence de chevauchement.
+-- type de quai, véhicule compatible, absence de chevauchement avec un autre
+-- rendez-vous ou avec un évènement bloquant (sur ce quai ou sur tout le site).
 CREATE PROCEDURE verifier_rendez_vous(
     IN p_id INT UNSIGNED, IN p_quai_id SMALLINT UNSIGNED, IN p_vehicule_id INT UNSIGNED,
     IN p_debut DATETIME, IN p_fin DATETIME, IN p_sens VARCHAR(12))
 BEGIN
     DECLARE v_statut_quai VARCHAR(15);
     DECLARE v_type_quai   VARCHAR(12);
+    DECLARE v_evenement   VARCHAR(100) DEFAULT NULL;
+    DECLARE v_message     VARCHAR(255);
 
     SELECT statut, type INTO v_statut_quai, v_type_quai FROM quai WHERE id = p_quai_id;
 
@@ -113,6 +130,38 @@ BEGIN
                   AND r.debut > p_debut - INTERVAL 4 HOUR
                   AND r.debut < p_fin AND r.fin > p_debut) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Ce véhicule a déjà un rendez-vous sur ce créneau.';
+    END IF;
+
+    -- Évènement bloquant sur ce quai ou sur tout le site (quai_id NULL). Pas de borne de durée
+    -- ici (une fermeture peut durer plusieurs jours) : la table reste petite.
+    SET v_evenement = (SELECT e.libelle FROM evenement e
+                        WHERE e.bloquant AND (e.quai_id = p_quai_id OR e.quai_id IS NULL)
+                          AND e.debut < p_fin AND e.fin > p_debut
+                        ORDER BY e.debut LIMIT 1);
+    IF v_evenement IS NOT NULL THEN
+        SET v_message = CONCAT('Ce créneau est bloqué par un évènement du planning : ', v_evenement, '.');
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_message;
+    END IF;
+END$$
+
+-- Contrôle d'un évènement bloquant : il ne peut pas recouvrir un rendez-vous
+-- encore planifié (sur son quai, ou sur n'importe quel quai s'il concerne tout le site) ;
+-- ces rendez-vous doivent d'abord être déplacés ou annulés.
+CREATE PROCEDURE verifier_evenement(
+    IN p_quai_id SMALLINT UNSIGNED, IN p_debut DATETIME, IN p_fin DATETIME, IN p_bloquant BOOLEAN)
+BEGIN
+    DECLARE v_nb INT;
+    DECLARE v_message VARCHAR(255);
+    IF p_bloquant THEN
+        SELECT COUNT(*) INTO v_nb FROM rendez_vous r
+         WHERE r.statut = 'planifie'
+           AND (p_quai_id IS NULL OR r.quai_id = p_quai_id)
+           AND r.debut > p_debut - INTERVAL 4 HOUR      -- un RDV dure au plus 4 h (ck_rdv_creneau)
+           AND r.debut < p_fin AND r.fin > p_debut;
+        IF v_nb > 0 THEN
+            SET v_message = CONCAT(v_nb, ' rendez-vous planifié(s) sur ce créneau : déplacez-les ou annulez-les avant de bloquer le créneau.');
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = v_message;
+        END IF;
     END IF;
 END$$
 
@@ -191,6 +240,20 @@ BEGIN
     IF NEW.statut = 'planifie' AND (NEW.quai_id <> OLD.quai_id OR NEW.vehicule_id <> OLD.vehicule_id
         OR NEW.debut <> OLD.debut OR NEW.fin <> OLD.fin OR NEW.sens <> OLD.sens OR OLD.statut <> 'planifie') THEN
         CALL verifier_rendez_vous(NEW.id, NEW.quai_id, NEW.vehicule_id, NEW.debut, NEW.fin, NEW.sens);
+    END IF;
+END$$
+
+CREATE TRIGGER tr_evenement_bi BEFORE INSERT ON evenement FOR EACH ROW
+BEGIN
+    CALL verifier_evenement(NEW.quai_id, NEW.debut, NEW.fin, NEW.bloquant);
+END$$
+
+CREATE TRIGGER tr_evenement_bu BEFORE UPDATE ON evenement FOR EACH ROW
+BEGIN
+    -- revalidé seulement si le créneau, le quai ou le caractère bloquant change
+    IF NEW.debut <> OLD.debut OR NEW.fin <> OLD.fin OR NOT (NEW.quai_id <=> OLD.quai_id)
+       OR NEW.bloquant <> OLD.bloquant THEN
+        CALL verifier_evenement(NEW.quai_id, NEW.debut, NEW.fin, NEW.bloquant);
     END IF;
 END$$
 
@@ -729,3 +792,48 @@ SELECT l.id AS lot_id, l.code_lot, ar.reference, ar.designation, l.date_limite_c
  WHERE l.date_limite_conso IS NOT NULL
    AND l.date_limite_conso <= CURRENT_DATE + INTERVAL 30 DAY
  GROUP BY l.id, l.code_lot, ar.reference, ar.designation, l.date_limite_conso;
+
+-- =====================================================================
+--  ÉVÈNEMENTS PROGRAMMÉS (planificateur MySQL / MariaDB)
+--   Exécutés par le serveur lui-même, sans action d'un utilisateur.
+--   Ils nécessitent event_scheduler = ON (positionné par sql/installer.php ;
+--   pour le rendre permanent : event_scheduler=ON dans la section [mysqld] de my.ini).
+--   Les changements de statut des quais passent par tr_quai_au : ils sont donc
+--   journalisés dans historique_statut, sans auteur (changement automatique).
+-- =====================================================================
+DELIMITER $$
+
+-- Toutes les 15 minutes : un quai passe hors service pendant une maintenance ou un
+-- nettoyage bloquant inscrit au planning, et revient en service à la fin de l'intervention.
+-- Un quai occupé n'est pas touché : il passera hors service au passage suivant, une fois
+-- le camion parti. Seuls les quais dont une intervention s'est terminée dans les dernières
+-- 24 h sont remis en service, pour ne pas annuler un « hors service » saisi à la main.
+CREATE EVENT ev_quais_maintenance
+    ON SCHEDULE EVERY 15 MINUTE STARTS CURRENT_TIMESTAMP
+    COMMENT 'Met les quais hors service pendant les maintenances et nettoyages du planning'
+DO BEGIN
+    UPDATE quai q SET q.statut = 'hors_service'
+     WHERE q.statut = 'libre'
+       AND EXISTS (SELECT 1 FROM evenement e
+                    WHERE e.quai_id = q.id AND e.bloquant AND e.type IN ('maintenance', 'nettoyage')
+                      AND e.debut <= NOW() AND e.fin > NOW());
+
+    UPDATE quai q SET q.statut = 'libre'
+     WHERE q.statut = 'hors_service'
+       AND EXISTS (SELECT 1 FROM evenement e
+                    WHERE e.quai_id = q.id AND e.bloquant AND e.type IN ('maintenance', 'nettoyage')
+                      AND e.fin <= NOW() AND e.fin > NOW() - INTERVAL 1 DAY)
+       AND NOT EXISTS (SELECT 1 FROM evenement e
+                        WHERE e.quai_id = q.id AND e.bloquant AND e.type IN ('maintenance', 'nettoyage')
+                          AND e.debut <= NOW() AND e.fin > NOW());
+END$$
+
+-- Chaque mois, la nuit : les évènements du planning terminés depuis plus d'un an
+-- n'ont plus d'utilité opérationnelle et sont supprimés.
+CREATE EVENT ev_purge_evenements
+    ON SCHEDULE EVERY 1 MONTH STARTS CURRENT_DATE + INTERVAL 1 DAY + INTERVAL 3 HOUR
+    COMMENT 'Supprime les évènements du planning terminés depuis plus d''un an'
+DO
+    DELETE FROM evenement WHERE fin < NOW() - INTERVAL 1 YEAR$$
+
+DELIMITER ;

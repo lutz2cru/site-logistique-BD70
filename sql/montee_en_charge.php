@@ -23,6 +23,12 @@ $opts = getopt('', ['host::', 'user::', 'pass::', 'mouvements::', 'rdv::']);
 $pdo = new PDO('mysql:host=' . ($opts['host'] ?? 'localhost') . ';dbname=entrepot;charset=utf8mb4', $opts['user'] ?? 'root', $opts['pass'] ?? '', [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
+// planificateur suspendu pendant le chargement : ev_quais_maintenance pourrait passer un quai
+// hors service en cours de route, et les rendez-vous d'archive sur ce quai seraient refusés
+try { $pdo->exec('SET GLOBAL event_scheduler = OFF'); } catch (PDOException $e) {}
+register_shutdown_function(function () use ($pdo) {
+    try { $pdo->exec('SET GLOBAL event_scheduler = ON'); } catch (PDOException $e) {}
+});
 
 const LOT_SQL = 50000;          // lignes insérées par requête INSERT … SELECT
 const COUPLES_PAR_LOT = 5;      // couples entrée / sortie par lot d'archive

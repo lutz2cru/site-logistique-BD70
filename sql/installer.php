@@ -64,6 +64,9 @@ function executerFichierSql(PDO $pdo, string $chemin): void
 }
 
 echo "Création du schéma...\n";
+// planificateur suspendu pendant la simulation : un évènement programmé ne doit pas
+// changer le statut d'un quai pendant que l'historique est généré
+try { $pdo->exec('SET GLOBAL event_scheduler = OFF'); } catch (PDOException $e) {}
 executerFichierSql($pdo, __DIR__ . '/01_schema.sql');
 executerFichierSql($pdo, __DIR__ . '/02_automatisation.sql');
 $pdo->exec('USE entrepot');
@@ -759,6 +762,76 @@ function comparerEvenements(array $a, array $b): int
     if ($a['debut'] == $b['debut']) { return 0; }
     return $a['debut'] < $b['debut'] ? -1 : 1;
 }
+// Évènements du planning : insérés avant les rendez-vous, car un rendez-vous ne peut pas recouvrir
+// un évènement bloquant (déclencheur). Les créneaux bloqués sont ensuite évités par la simulation.
+$creneauxBloques = [];   // [quai_id ou null (tout le site), début, fin]
+function evenement(PDO $pdo, array &$bloques, string $type, string $libelle, ?int $quai, DateTimeImmutable $debut,
+                   DateTimeImmutable $fin, bool $bloquant, ?int $auteur, ?string $commentaire = null): void
+{
+    inserer($pdo, 'evenement', ['type' => $type, 'libelle' => $libelle, 'quai_id' => $quai, 'debut' => dt($debut), 'fin' => dt($fin),
+        'bloquant' => (int) $bloquant, 'commentaire' => $commentaire, 'auteur_id' => $auteur]);
+    if ($bloquant) { $bloques[] = [$quai, $debut, $fin]; }
+}
+/** Vrai si un évènement bloquant recouvre [début, fin[ sur ce quai ou sur tout le site. */
+function creneauBloque(array $bloques, int $quai, DateTimeImmutable $debut, DateTimeImmutable $fin): bool
+{
+    foreach ($bloques as [$q, $d, $f]) {
+        if (($q === null || $q === $quai) && $d < $fin && $f > $debut) { return true; }
+    }
+    return false;
+}
+$pdo->beginTransaction();
+$feries = ['01-01', '05-01', '05-08', '07-14', '08-15', '11-01', '11-11', '12-25'];   // jours fériés à date fixe
+$quaisFrigo = array_slice(array_keys($quais), -2);                                  // Q15 et Q16
+$quaisMaintenance = array_values(array_diff(array_keys($quais), [$quaiHorsService]));
+$responsable = $utilisateurs['responsable'][0];
+$nbEvenements = 0;
+for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS + 7; $j++) {
+    $jour = $aujourdhui->modify(($j >= 0 ? '+' : '') . $j . ' days');
+    $dow = (int) $jour->format('N');
+    $semaine = (int) $jour->format('W');
+    if ($dow === 7) { continue; }
+    $auteur = alea($utilisateurs['responsable']);
+    if (in_array($jour->format('m-d'), $feries, true)) {
+        evenement($pdo, $creneauxBloques, 'fermeture', 'Jour férié : site fermé', null, $jour, $jour->modify('+1 day'), true, $auteur);
+        $nbEvenements++;
+        continue;
+    }
+    if ($dow === 1) {         // nettoyage hebdomadaire d'un quai frigorifique, en alternance
+        evenement($pdo, $creneauxBloques, 'nettoyage', 'Nettoyage et désinfection du quai frigorifique', $quaisFrigo[$semaine % 2],
+            $jour->setTime(6, 0), $jour->setTime(7, 30), true, $auteur, 'Protocole HACCP : désinfection du sas et contrôle des joints');
+        $nbEvenements++;
+    }
+    if ($dow === 3) {         // maintenance préventive d'un niveleur, un quai différent chaque semaine
+        $q = $quaisMaintenance[$semaine % count($quaisMaintenance)];
+        evenement($pdo, $creneauxBloques, 'maintenance', 'Maintenance préventive du niveleur', $q,
+            $jour->setTime(13, 30), $jour->setTime(16, 30), true, $auteur, 'Intervention du prestataire de maintenance');
+        $nbEvenements++;
+    }
+    if ($dow === 4) {         // formation sécurité : information, n'empêche pas les rendez-vous
+        evenement($pdo, $creneauxBloques, 'formation', $semaine % 2 ? 'Formation sécurité : conduite de chariots' : 'Exercice d\'évacuation incendie',
+            null, $jour->setTime(14, 0), $jour->setTime(15, 30), false, $auteur);
+        $nbEvenements++;
+    }
+    if ($dow === 2 && $semaine % 3 === 0) {   // audit qualité d'un client, toutes les trois semaines
+        evenement($pdo, $creneauxBloques, 'audit', 'Audit qualité client', null, $jour->setTime(9, 0), $jour->setTime(11, 30), false, $auteur,
+            'Visite de l\'entrepôt et revue des procédures de traçabilité');
+        $nbEvenements++;
+    }
+    if ($dow === 6 && (int) $jour->format('j') <= 7) {   // inventaire tournant le premier samedi du mois
+        evenement($pdo, $creneauxBloques, 'inventaire', 'Inventaire tournant : quais fermés aux camions', null,
+            $jour->setTime(6, 0), $jour->setTime(12, 0), true, $auteur, 'Comptage des emplacements des zones A et B');
+        $nbEvenements++;
+    }
+}
+// le quai hors service l'est pour une réparation en cours
+evenement($pdo, $creneauxBloques, 'maintenance', 'Réparation du niveleur (panne hydraulique)', $quaiHorsService,
+    $aujourdhui->setTime(6, 0), $aujourdhui->modify('+' . (JOURS_FUTURS + 3) . ' days')->setTime(21, 0), true, $responsable,
+    'Pièce commandée, remise en service prévue après réception');
+$nbEvenements++;
+$pdo->commit();
+echo "  $nbEvenements évènements au planning\n";
+
 $occupesCreneau = [];   // "v<id>@<créneau>" : véhicule déjà attendu sur ce créneau
 $surSite = [];          // véhicules / chauffeurs actuellement sur le site
 for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
@@ -772,6 +845,7 @@ for ($j = -JOURS_HISTORIQUE; $j <= JOURS_FUTURS; $j++) {
         if ($qid === $quaiHorsService && $j >= 0) { continue; }
         for ($h = 0; $h < 9; $h++) {
             $debut = $jour->setTime(6, 0)->modify('+' . ($h * 90) . ' minutes');
+            if (creneauBloque($creneauxBloques, $qid, $debut, plusMin($debut, 90))) { continue; }   // maintenance, fermeture…
             $remplissage = $jour->format('N') == 6 ? 0.2 : 0.5;
             $ev = null;
             if (proba($remplissage)) {
@@ -931,6 +1005,14 @@ foreach (['localhost', '127.0.0.1'] as $origine) {
     $ecriture = $pdo->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'entrepot' AND table_type = 'BASE TABLE'
                               AND table_name NOT IN ('stock', 'historique_statut')")->fetchAll(PDO::FETCH_COLUMN);
     foreach ($ecriture as $t) { $pdo->exec("GRANT INSERT, UPDATE, DELETE ON entrepot.`$t` TO $compte"); }
+}
+
+// Planificateur d'évènements : les évènements programmés (CREATE EVENT) ne s'exécutent que s'il est actif
+try {
+    $pdo->exec('SET GLOBAL event_scheduler = ON');
+} catch (PDOException $e) {
+    echo "Planificateur d'évènements non activé (droit SUPER requis) : ajouter event_scheduler=ON dans my.ini.
+";
 }
 
 // ---------------------------------------------------------------------
