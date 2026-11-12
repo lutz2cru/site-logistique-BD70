@@ -4,7 +4,7 @@ Format annoncé : 10 min de présentation (5 min avec support + 5 min de démons
 
 | Fichier | Contenu |
 |---|---|
-| `diaporama.html` | Les 8 diapos et leurs notes d'orateur, lisibles hors ligne dans un navigateur (les polices viennent de Google Fonts quand on est connecté) |
+| `diaporama.html` | Les 6 diapos et leurs notes d'orateur, lisibles hors ligne dans un navigateur (les polices viennent de Google Fonts quand on est connecté) |
 | `script_demo.html` | Script de la démo : préparation, 7 scènes minutées, texte à dire, notions de cours, plan B, chronomètre |
 | `revision.html` | Révisions pour débutant : le projet raconté simplement, chaque chapitre du cours relié au projet, 40 questions (en clair puis version complète), glossaire cliquable |
 | `diaporama/` | Sources des diapos (`deck.json` + une diapo HTML par fichier), copie de l'artifact en ligne |

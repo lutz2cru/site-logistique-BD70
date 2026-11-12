@@ -1,30 +1,36 @@
 <section id="sujet" data-transition="fade" style="background:#F6F4EE;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
 <div style="display:flex;flex-direction:column;gap:12px">
-<p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B85A1C;font-weight:700">Le sujet</p>
-<h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Suivre la marchandise du camion entrant au camion sortant</h2>
+<p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B85A1C;font-weight:700">Le projet</p>
+<h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Gérer un entrepôt, du camion qui arrive au camion qui repart</h2>
 </div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
-<div style="display:flex;flex-direction:column;gap:20px;background:#EAE6DC;padding:48px;border-radius:16px">
-<h3 style="font-size:32px;font-weight:700">Demandé dans le site web</h3>
-<ul style="font-size:28px;line-height:1.5;color:#3A4558">
-<li>Connexion et profils</li>
-<li>Quais et rendez-vous</li>
-<li>Flux de camions</li>
-<li>Réception des marchandises</li>
-<li>Emplacements et stocks</li>
-</ul>
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:24px">
+<div style="display:flex;flex-direction:column;gap:12px;background:#EAE6DC;padding:32px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:48px;font-weight:600;color:#B85A1C;line-height:1">1</p>
+<h3 style="font-size:32px;font-weight:700">Rendez-vous</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A4558">Le transporteur réserve un quai</p>
 </div>
-<div style="display:flex;flex-direction:column;gap:20px;background:#14213D;color:#F6F4EE;padding:48px;border-radius:16px">
-<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Au-delà du minimum web</h3>
-<ul style="font-size:28px;line-height:1.5;color:#D5DBE5">
-<li>Référentiels complets (transporteurs, articles…)</li>
-<li>Commandes, prélèvement FIFO / FEFO</li>
-<li>Colis, chargement, documents de transport</li>
-<li>Traçabilité d’un lot de bout en bout</li>
-<li>Indicateurs, graphiques, rapport imprimable</li>
-</ul>
+<div style="display:flex;flex-direction:column;gap:12px;background:#EAE6DC;padding:32px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:48px;font-weight:600;color:#B85A1C;line-height:1">2</p>
+<h3 style="font-size:32px;font-weight:700">Arrivée</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A4558">Le camion est enregistré et appelé à quai</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#EAE6DC;padding:32px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:48px;font-weight:600;color:#B85A1C;line-height:1">3</p>
+<h3 style="font-size:32px;font-weight:700">Réception</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A4558">La marchandise est contrôlée</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#EAE6DC;padding:32px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:48px;font-weight:600;color:#B85A1C;line-height:1">4</p>
+<h3 style="font-size:32px;font-weight:700">Stockage</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A4558">Elle est rangée dans un emplacement</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:12px;background:#14213D;color:#F6F4EE;padding:32px;border-radius:16px;border-top:8px solid #E8772E">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:48px;font-weight:600;color:#E8772E;line-height:1">5</p>
+<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Expédition</h3>
+<p style="font-size:24px;line-height:1.4;color:#D5DBE5">Les commandes sont préparées et chargées</p>
 </div>
 </div>
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#5A6474">PHP 8 + PDO · MariaDB 10.4 · 5 profils · ~120 000 lignes de données factices</p>
-<aside>[Orateur 1] Le sujet : gérer les opérations d’un entrepôt — camions, quais, réception, stockage, expédition — avec une traçabilité complète et des indicateurs. Le site web n’était exigé que pour cinq modules (à gauche). Nous avons couvert tout le sujet, y compris la préparation et l’expédition des commandes, pour que la chaîne soit complète du camion entrant au camion sortant. Technologies : PHP 8 avec PDO, MariaDB. (≈ 35 s)</aside>
+<p style="font-size:32px;line-height:1.4;color:#3A4558"><b style="color:#14213D">5 profils</b>, chacun avec ses propres pages : administrateur, responsable, agent d’accueil, magasinier, transporteur.</p>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#5A6474">Sujet A26 « Site logistique » · environ 120 000 lignes de données fictives</p>
+<aside>[Orateur 1] Le sujet : gérer un entrepôt logistique. Un camion prend rendez-vous sur un quai, il arrive, on contrôle sa marchandise, on la range, puis on prépare et on charge les commandes des clients. Notre site suit toute cette chaîne. Chaque utilisateur a un profil, par exemple agent d’accueil ou magasinier, et ne voit que les pages qui le concernent. Pour tester le site, nous avons rempli la base avec environ 120 000 lignes de données fictives. (≈ 35 s)</aside>
 </section>

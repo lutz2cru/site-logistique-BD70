@@ -1,31 +1,34 @@
-<section id="demarche" data-transition="fade" style="background:#F6F4EE;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:56px">
+<section id="demarche" data-transition="fade" style="background:#F6F4EE;color:#14213D;font-family:'Public Sans', Arial, sans-serif;padding:128px 128px 160px;display:flex;flex-direction:column;gap:48px">
 <div style="display:flex;flex-direction:column;gap:12px">
-<p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B85A1C;font-weight:700">Démarche</p>
-<h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Quatre modèles qui décrivent le même périmètre</h2>
+<p style="font-size:24px;letter-spacing:4px;text-transform:uppercase;color:#B85A1C;font-weight:700">Conception</p>
+<h2 style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;line-height:1.1">Trois étapes, comme dans le cours</h2>
 </div>
-<div style="display:flex;gap:24px;align-items:stretch">
-<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#EAE6DC;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
-<p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#B85A1C;line-height:1">01</p>
+<div style="display:flex;gap:48px;align-items:start">
+<div style="flex:1;display:flex;flex-direction:column;gap:32px">
+<div style="display:flex;gap:24px;align-items:baseline">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:48px;font-weight:600;color:#B85A1C;width:48px">1</p>
+<div style="display:flex;flex-direction:column;gap:6px">
 <h3 style="font-size:32px;font-weight:700">Cas d’utilisation</h3>
-<p style="font-size:24px;line-height:1.45;color:#3A4558">Une phrase du sujet = un cas. 5 acteurs, include / extend</p>
+<p style="font-size:24px;line-height:1.4;color:#3A4558">Qui fait quoi dans l’entrepôt</p>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#EAE6DC;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
-<p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#B85A1C;line-height:1">02</p>
-<h3 style="font-size:32px;font-weight:700">Entité-association</h3>
-<p style="font-size:24px;line-height:1.45;color:#3A4558">33 entités, 46 associations dont 12 N:N et 2 ternaires</p>
 </div>
-<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#EAE6DC;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
-<p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#B85A1C;line-height:1">03</p>
+<div style="display:flex;gap:24px;align-items:baseline">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:48px;font-weight:600;color:#B85A1C;width:48px">2</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700">Modèle entité-association</h3>
+<p style="font-size:24px;line-height:1.4;color:#3A4558">Les données à garder : camions, quais, lots, emplacements…</p>
+</div>
+</div>
+<div style="display:flex;gap:24px;align-items:baseline">
+<p style="font-family:'Oswald', Arial, sans-serif;font-size:48px;font-weight:600;color:#B85A1C;width:48px">3</p>
+<div style="display:flex;flex-direction:column;gap:6px">
 <h3 style="font-size:32px;font-weight:700">Schéma relationnel</h3>
-<p style="font-size:24px;line-height:1.45;color:#3A4558">46 tables en 3NF, clés métier en UNIQUE, contraintes CHECK</p>
-</div>
-<div style="flex:1;display:flex;flex-direction:column;gap:16px;background:#14213D;color:#F6F4EE;padding:40px;border-radius:16px;border-top:8px solid #E8772E">
-<p style="font-family:'Oswald', Arial, sans-serif;font-size:72px;font-weight:600;color:#E8772E;line-height:1">04</p>
-<h3 style="font-size:32px;font-weight:700;color:#F6F4EE">Base + site</h3>
-<p style="font-size:24px;line-height:1.45;color:#D5DBE5">Déclencheurs, procédures, vues, puis une page PHP par écran</p>
+<p style="font-size:24px;line-height:1.4;color:#3A4558">Les tables de la base, normalisées en 3NF</p>
 </div>
 </div>
-<p style="font-size:32px;line-height:1.4;color:#3A4558">Vérification dans les deux sens : chaque cas s’appuie sur le modèle, et chaque entité sert au moins un cas.</p>
-<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#5A6474">Livrables : uml/use_case_entrepot.svg · uml/diagramme_entite_association.svg · uml/schema_relationnel.svg</p>
-<aside>[Orateur 2] Notre démarche a suivi le cours : d’abord les cas d’utilisation, en relisant le sujet phrase par phrase, puis le modèle entité-association — 33 entités et 46 associations — puis sa traduction en 46 tables en troisième forme normale, dont un journal technique des statuts. Les N:N deviennent des tables de jointure, les identifiants métier (SIRET, immatriculation) sont déclarés UNIQUE, et chaque table a une clé artificielle id. Enfin la base, avec son automatisation, et le site. Nous avons vérifié la cohérence dans les deux sens : aucun élément du modèle ne sort du périmètre. (≈ 40 s)</aside>
+</div>
+<img src="/_blob/12c823e21d22bfd4ed3c29dc0c19d08d" alt="Diagramme entité-association du projet" style="width:860px;height:514px;object-fit:contain;background:#FFFFFF;border:1px solid #D8D2C4;border-radius:12px">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#5A6474">Diagrammes complets dans le dossier uml/ et dans le rapport</p>
+<aside>[Orateur 2] Pour concevoir la base, nous avons suivi les étapes du cours. D’abord les cas d’utilisation : qui fait quoi dans l’entrepôt. Ensuite le modèle entité-association, à droite, qui décrit les données à garder : les camions, les quais, les lots de marchandise, les emplacements. Enfin le schéma relationnel, c’est-à-dire les tables de la base, normalisées en troisième forme normale pour éviter les doublons. (≈ 35 s)</aside>
 </section>
