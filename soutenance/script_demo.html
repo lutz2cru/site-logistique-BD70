@@ -61,6 +61,7 @@ header.top { padding-top: 40px; display: flex; flex-direction: column; gap: 14px
 /* Scènes */
 .scenes { display: flex; flex-direction: column; gap: 0; border-top: 2px solid var(--ink); }
 .scene { display: grid; grid-template-columns: 112px 1fr; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--line); transition: background .2s; }
+.scene-s { display: grid; grid-template-columns: 112px 1fr; gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--line); }
 .scene.live { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .when { display: flex; flex-direction: column; gap: 6px; }
 .when .t { font-family: var(--mono); font-size: 15px; font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -85,7 +86,7 @@ section { display: flex; flex-direction: column; gap: 16px; }
 ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
 
 @media (max-width: 560px) {
-  .scene { grid-template-columns: 1fr; gap: 10px; }
+  .scene, .scene-s { grid-template-columns: 1fr; gap: 10px; }
   .when { flex-direction: row; align-items: center; gap: 10px; }
 }
 @media (prefers-reduced-motion: reduce) { .scene { transition: none; } }
@@ -139,8 +140,57 @@ ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column;
   </ul>
 </section>
 
+<section aria-labelledby="h-court">
+  <h2 id="h-court">Version courte · 4 min</h2>
+  <p class="muted">Pour un point rapide : pas de saisie longue, que des écrans qui marchent du premier coup. Les mêmes 3 fenêtres. Il suffit de repérer un quai réservé demain (case 4 ci-dessus).</p>
+  <div class="scenes">
+    <article class="scene-s">
+      <div class="when"><span class="t">0:00–0:40</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="body">
+        <h3>1 · Connexion et menu par profil</h3>
+        <p>Montrer la page de connexion, puis le tableau de bord de l’agent d’accueil. Pointer le menu.</p>
+        <p class="say">« Chaque profil n’a que son menu. L’agent d’accueil gère les quais et les camions, pas les stocks. »</p>
+      </div>
+    </article>
+    <article class="scene-s">
+      <div class="when"><span class="t">0:40–1:40</span><span class="pill w1">Fenêtre 1</span></div>
+      <div class="body">
+        <h3>2 · Un rendez-vous qui chevauche est refusé</h3>
+        <p><span class="ui">Planning des quais</span>, demain : créer un rendez-vous sur le créneau d’un quai déjà réservé. Lire le message de refus.</p>
+        <p class="say">« Le refus vient de la base elle-même, d’un déclencheur. Même une requête SQL directe serait refusée. »</p>
+      </div>
+    </article>
+    <article class="scene-s">
+      <div class="when"><span class="t">1:40–2:50</span><span class="pill w2">Fenêtre 2</span></div>
+      <div class="body">
+        <h3>3 · Chercher du stock et tracer un lot</h3>
+        <p><span class="ui">Recherche de stock</span> avec deux ou trois filtres, puis <span class="ui">Traçabilité d’un lot</span> : <code>L00000625</code>.</p>
+        <p class="say">« On retrouve le lot de sa réception jusqu’au camion qui l’a emporté, uniquement par jointures. »</p>
+      </div>
+    </article>
+    <article class="scene-s">
+      <div class="when"><span class="t">2:50–4:00</span><span class="pill">Fenêtre 3</span></div>
+      <div class="body">
+        <h3>4 · Indicateurs et rapport</h3>
+        <p><span class="ui">Indicateurs</span> : chiffres clés, graphiques, <span class="ui">Imprimer le rapport</span>. S’il reste du temps : modifier une fiche dans <span class="ui">Transporteurs</span>.</p>
+        <p class="say">« Les indicateurs sont calculés à la demande. Et toutes les données s’ajoutent, se modifient et se suppriment depuis le site. »</p>
+      </div>
+    </article>
+  </div>
+  <p class="muted">En retard : sauter la recherche de stock, garder la traçabilité.</p>
+</section>
+
+<section aria-labelledby="h-rep">
+  <h2 id="h-rep">Trois réponses à avoir en tête</h2>
+  <div class="qa">
+    <div><b>Pourquoi y a-t-il déjà des données ?</b><p>Le sujet demande une base remplie de données fictives en quantité. Le script <code>sql/installer.php</code> crée la base, puis simule environ deux mois d’activité (rendez-vous, camions, réceptions, commandes) : environ 120 000 lignes. Elles passent par les déclencheurs et procédures, donc elles respectent toutes les règles. Graine fixe : les mêmes codes à chaque installation.</p></div>
+    <div><b>Comment marche la connexion ?</b><p>À l’inscription, le mot de passe est haché (<code>password_hash</code>, bcrypt). À la connexion, <code>password_verify</code> le compare au hash, puis une session PHP s’ouvre avec un nouvel identifiant. Chaque page vérifie le profil côté serveur. Le site se connecte à la base avec un compte limité, <code>entrepot_app</code>, qui ne peut pas écrire dans le stock.</p></div>
+    <div><b>Y a-t-il des automatisations dans la base ?</b><p>Oui, dans <code>sql/02_automatisation.sql</code> : 27 déclencheurs, 7 procédures, 4 fonctions et 5 vues. Ils contrôlent (chevauchement de rendez-vous, zone compatible), mettent à jour (stock, statut des quais) et historisent (journal des statuts, mouvements jamais supprimés).</p></div>
+  </div>
+</section>
+
 <section aria-labelledby="h-sc">
-  <h2 id="h-sc">Le déroulé</h2>
+  <h2 id="h-sc">Version complète · 5 min</h2>
   <div class="scenes" id="scenes">
 
     <article class="scene" data-from="0" data-to="25">
